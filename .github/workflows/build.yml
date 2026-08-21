@@ -15,6 +15,10 @@ concurrency:
   group: build-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+  issues: write
+
 jobs:
   build:
     name: Archive & Export IPA
@@ -218,6 +222,30 @@ jobs:
           name: build-logs
           path: build-archive.log
           if-no-files-found: ignore
+
+      - name: Publish build errors as issue
+        if: failure()
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const fs = require('fs');
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            let report = `Build failed in [run ${context.runId}](${runUrl}).\n`;
+            try {
+              const log = fs.readFileSync('build-archive.log', 'utf8').split('\n');
+              const errors = [...new Set(log.filter(l => /error:|error generated/.test(l)))].slice(0, 30);
+              report += '\n## Errors\n```text\n' + (errors.join('\n') || '(no "error:" lines matched)') + '\n```\n';
+              report += '\n<details><summary>Log tail</summary>\n\n```text\n' + log.slice(-60).join('\n') + '\n```\n\n</details>\n';
+            } catch (e) {
+              report += '\nNo `build-archive.log` was produced — the build failed before logging.\n';
+            }
+            const { owner, repo } = context.repo;
+            const list = await github.rest.issues.listForRepo({ owner, repo, labels: 'ci-build-report', state: 'open', per_page: 1 });
+            if (list.data.length > 0) {
+              await github.rest.issues.update({ owner, repo, issue_number: list.data[0].number, body: report });
+            } else {
+              await github.rest.issues.create({ owner, repo, title: 'CI build failure report', body: report, labels: ['ci-build-report'] });
+            }
 
       # ------------------------------------------------------------------
       # Artifact
