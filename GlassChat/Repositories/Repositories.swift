@@ -3,6 +3,7 @@ import Foundation
 // Repository abstractions so the local backend can be swapped for a remote
 // one (e.g. RemoteChatRepository) without touching views or view models.
 
+@MainActor
 protocol ChatRepository {
     func all() -> [Chat]
     func chat(id: String) -> Chat?
@@ -10,6 +11,7 @@ protocol ChatRepository {
     func remove(id: String)
 }
 
+@MainActor
 protocol MessageRepository {
     func messages(in chatID: String) -> [Message]
     func add(_ message: Message)
@@ -17,6 +19,7 @@ protocol MessageRepository {
     func remove(_ message: Message)
 }
 
+@MainActor
 protocol UserRepository {
     func all() -> [User]
     func user(id: String) -> User?
@@ -29,11 +32,13 @@ protocol MediaRepository {
     func deleteAll()
 }
 
+@MainActor
 protocol AuthenticationService {
     var currentUserID: String { get }
     func signInLocally()
 }
 
+@MainActor
 protocol PresenceService {
     func start()
     func stop()
@@ -98,6 +103,10 @@ extension MediaService: MediaRepository {
 
     func fileURL(_ fileName: String) -> URL {
         MediaService.url(for: fileName)
+    }
+
+    func deleteAll() {
+        MediaService.deleteAll()
     }
 }
 
