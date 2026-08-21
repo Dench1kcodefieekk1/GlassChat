@@ -269,6 +269,8 @@ enum MessagePreview {
                 return message.text.isEmpty ? "Photo" : "Photo · \(message.text)"
             case .voice:
                 return "Voice message"
+            case .file:
+                return attachment.displayName ?? "File"
             }
         }
         return message.text

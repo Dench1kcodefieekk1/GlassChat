@@ -85,6 +85,8 @@ struct MessageRow: View {
                     .accessibilityLabel("Photo")
             case .voice:
                 VoiceBubble(attachment: attachment, isOwn: isOwn, playback: model.playback)
+            case .file:
+                FileBubble(attachment: attachment, isOwn: isOwn)
             }
         }
 
@@ -327,5 +329,46 @@ struct WaveformView: View {
             }
         }
         .accessibilityHidden(true)
+    }
+}
+
+// MARK: - File bubble
+
+struct FileBubble: View {
+    let attachment: Attachment
+    let isOwn: Bool
+
+    private var fileURL: URL { MediaService.url(for: attachment.fileName) }
+
+    var body: some View {
+        HStack(spacing: 10) {
+            ZStack {
+                Circle()
+                    .fill(isOwn
+                          ? AnyShapeStyle(.white.opacity(0.22))
+                          : AnyShapeStyle(Color(uiColor: .tertiarySystemFill)))
+                Image(systemName: "doc.fill")
+                    .font(.system(size: 17, weight: .medium))
+                    .foregroundStyle(isOwn ? AnyShapeStyle(.white) : AnyShapeStyle(.tint))
+            }
+            .frame(width: 40, height: 40)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(attachment.displayName ?? attachment.fileName)
+                    .font(.subheadline.weight(.medium))
+                    .lineLimit(1)
+                Text(attachment.fileSize ?? 0, format: .byteCount(style: .file))
+                    .font(.caption)
+                    .foregroundStyle(isOwn ? AnyShapeStyle(.white.opacity(0.85)) : AnyShapeStyle(.secondary))
+            }
+
+            ShareLink(item: fileURL) {
+                Image(systemName: "arrow.down.circle.fill")
+                    .font(.title3)
+                    .foregroundStyle(isOwn ? AnyShapeStyle(.white) : AnyShapeStyle(.tint))
+            }
+            .accessibilityLabel("Download file")
+        }
+        .frame(maxWidth: 260, alignment: .leading)
     }
 }

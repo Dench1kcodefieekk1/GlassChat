@@ -1,6 +1,7 @@
 import SwiftUI
 import UIKit
 import PhotosUI
+import UniformTypeIdentifiers
 
 struct ChatView: View {
     @Environment(DataStore.self) private var store
@@ -17,15 +18,24 @@ struct ChatView: View {
                 ToolbarItem(placement: .principal) {
                     header
                 }
+                ToolbarItem(placement: .topBarTrailing) {
+                    moreMenu
+                }
             }
             .background(Color(uiColor: .systemGroupedBackground))
             .onAppear { model.activate() }
             .onDisappear { model.deactivate() }
-            .onChange(of: store.sortedMessages(for: model.chatID).count) {
+            .onChange(of: store.sortedMessages(for: model.chatID).count) { oldValue, newValue in
                 model.markReadIfActive()
-                model.scrollTrigger += 1
+                if newValue > oldValue,
+                   let last = store.lastMessage(for: model.chatID),
+                   last.senderID != store.currentUserID,
+                   !model.isNearBottom {
+                    model.pendingIncoming += 1
+                } else {
+                    model.scrollTrigger += 1
+                }
             }
-            .sensoryFeedback(.impact(weight: .light), trigger: model.scrollTrigger)
             .photosPicker(isPresented: $model.showPhotoPicker,
                           selection: $model.pickerItem,
                           matching: .images)
@@ -37,6 +47,12 @@ struct ChatView: View {
                         model.pendingImage = PendingImage(image: image)
                     }
                     model.pickerItem = nil
+                }
+            }
+            .fileImporter(isPresented: $model.showFilePicker,
+                          allowedContentTypes: [.item]) { result in
+                if case .success(let url) = result {
+                    model.attachFile(at: url)
                 }
             }
             .sheet(item: $model.pendingImage) { pending in
@@ -68,6 +84,11 @@ struct ChatView: View {
             } message: {
                 Text("Enable microphone access in Settings to record voice messages.")
             }
+            .alert("Camera Unavailable", isPresented: $model.cameraUnavailableAlert) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("Camera is unavailable on this device.")
+            }
     }
 
     // MARK: - Header
@@ -94,16 +115,56 @@ struct ChatView: View {
                 isOnline: model.otherUser?.isOnline == true
             )
             VStack(alignment: .leading, spacing: 1) {
-                Text(model.title)
-                    .font(.headline)
-                    .foregroundStyle(.primary)
-                    .lineLimit(1)
-                Text(model.subtitle)
-                    .font(.caption)
-                    .foregroundStyle(model.isTyping ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
-                    .lineLimit(1)
+                HStack(spacing: 4) {
+                    Text(model.title)
+                        .font(.headline)
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                    if model.otherUser?.isVerified == true {
+                        Image(systemName: "checkmark.seal.fill")
+                            .font(.subheadline)
+                            .foregroundStyle(.tint)
+                            .accessibilityLabel("Verified")
+                    }
+                }
+                if model.isTyping {
+                    HStack(spacing: 5) {
+                        Text("typing")
+                            .font(.caption)
+                            .foregroundStyle(.tint)
+                        TypingDotsView(dotColor: .accentColor, dotSize: 3.5)
+                    }
+                } else {
+                    Text(model.subtitle)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
             }
         }
+        .animation(.easeInOut(duration: 0.2), value: model.isTyping)
+    }
+
+    @ViewBuilder
+    private var moreMenu: some View {
+        Menu {
+            if let chat = model.chat {
+                Button(chat.isMuted ? "Unmute" : "Mute",
+                       systemImage: chat.isMuted ? "bell" : "bell.slash") {
+                    store.toggleMute(chat)
+                }
+                Button(chat.isPinned ? "Unpin" : "Pin",
+                       systemImage: chat.isPinned ? "pin.slash" : "pin") {
+                    store.togglePin(chat)
+                }
+            }
+            Button("Mark as Read", systemImage: "checkmark") {
+                store.markAllRead(model.chatID)
+            }
+        } label: {
+            Image(systemName: "ellipsis")
+        }
+        .accessibilityLabel("Chat options")
     }
 
     // MARK: - Message list
@@ -120,14 +181,36 @@ struct ChatView: View {
                 .padding(.horizontal, AppTheme.chatHorizontalPadding)
                 .padding(.top, 8)
                 .padding(.bottom, 6)
-                .animation(.spring(duration: 0.3), value: model.scrollTrigger)
+                .animation(.spring(response: 0.35, dampingFraction: 0.8),
+                           value: store.sortedMessages(for: model.chatID).count)
             }
             .defaultScrollAnchor(.bottom)
             .scrollDismissesKeyboard(.interactively)
-            .safeAreaInset(edge: .bottom) {
-                MessageInputBar(model: model)
+            .onScrollGeometryChange(for: Bool.self) { geometry in
+                let distance = geometry.contentSize.height + geometry.contentInsets.bottom
+                    - geometry.contentOffset.y - geometry.containerSize.height
+                return distance < 140
+            } action: { _, isNear in
+                model.isNearBottom = isNear
+                if isNear { model.pendingIncoming = 0 }
             }
+            .safeAreaInset(edge: .bottom) {
+                MessageComposer(model: model)
+            }
+            .overlay(alignment: .bottom) {
+                if model.pendingIncoming > 0 && !model.isNearBottom {
+                    newMessagesButton(proxy: proxy)
+                        .padding(.bottom, 92)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+            }
+            .animation(.spring(response: 0.3, dampingFraction: 0.8), value: model.pendingIncoming)
             .onChange(of: model.scrollTrigger) {
+                if model.isNearBottom {
+                    scrollToBottom(proxy: proxy, animated: true)
+                }
+            }
+            .onChange(of: model.sendScrollTrigger) {
                 scrollToBottom(proxy: proxy, animated: true)
             }
             .onAppear {
@@ -149,6 +232,26 @@ struct ChatView: View {
         }
     }
 
+    private func newMessagesButton(proxy: ScrollViewProxy) -> some View {
+        Button {
+            model.pendingIncoming = 0
+            scrollToBottom(proxy: proxy, animated: true)
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "arrow.down")
+                    .font(.footnote.weight(.bold))
+                Text("New messages")
+                    .font(.footnote.weight(.semibold))
+                UnreadBadge(count: model.pendingIncoming, muted: false)
+            }
+            .foregroundStyle(.primary)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 9)
+            .glassEffect(.regular.interactive(), in: Capsule())
+        }
+        .accessibilityLabel("Scroll to new messages")
+    }
+
     @ViewBuilder
     private func row(for item: ChatRowItem) -> some View {
         switch item.kind {
@@ -160,7 +263,13 @@ struct ChatView: View {
             TypingBubble()
         case .message(let message):
             MessageRow(message: message, model: model)
-                .transition(.opacity)
+                .transition(.asymmetric(
+                    insertion: .opacity
+                        .combined(with: .scale(scale: 0.96, anchor: .bottom))
+                        .combined(with: .offset(y: 8)),
+                    removal: .opacity
+                        .combined(with: .scale(scale: 0.96, anchor: .bottom))
+                ))
         }
     }
 }
@@ -206,18 +315,9 @@ struct UnreadSeparator: View {
 struct TypingBubble: View {
     var body: some View {
         HStack(alignment: .bottom, spacing: 8) {
-            TimelineView(.animation) { context in
-                let time = context.date.timeIntervalSinceReferenceDate
-                HStack(spacing: 4) {
-                    ForEach(0..<3, id: \.self) { index in
-                        Circle()
-                            .fill(.secondary)
-                            .frame(width: 7, height: 7)
-                            .opacity(0.35 + 0.65 * abs(sin(time * 3 + Double(index) * 0.9)))
-                    }
-                }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 12)
+            TypingDotsView(dotColor: Color(uiColor: .secondaryLabel), dotSize: 7)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 16)
                 .background(
                     Color(uiColor: .secondarySystemGroupedBackground),
                     in: UnevenRoundedRectangle(
@@ -228,7 +328,6 @@ struct TypingBubble: View {
                         style: .continuous
                     )
                 )
-            }
             Spacer(minLength: 48)
         }
         .accessibilityLabel("Contact is typing")

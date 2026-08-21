@@ -43,11 +43,17 @@ final class ChatViewModel {
     var pickerItem: PhotosPickerItem?
     var showPhotoPicker = false
     var showCamera = false
+    var showFilePicker = false
+    var cameraUnavailableAlert = false
     var recordingDenied = false
     var scrollTrigger = 0
+    var sendScrollTrigger = 0
+    var isNearBottom = true
+    var pendingIncoming = 0
 
     private var firstUnreadID: String?
     private var unreadCaptured = false
+    private var replyTask: Task<Void, Never>?
 
     static let cannedReplies = [
         "Sounds good!",
@@ -131,6 +137,9 @@ final class ChatViewModel {
 
     func deactivate() {
         playback.stop()
+        replyTask?.cancel()
+        replyTask = nil
+        store.setTyping(chatID, false)
         if store.activeChatID == chatID {
             store.activeChatID = nil
         }
@@ -163,6 +172,7 @@ final class ChatViewModel {
         replyTo = nil
         store.addMessage(message)
         scrollTrigger += 1
+        sendScrollTrigger += 1
         simulateDeliveryAndReply(for: message)
     }
 
@@ -183,6 +193,43 @@ final class ChatViewModel {
         replyTo = nil
         store.addMessage(message)
         scrollTrigger += 1
+        sendScrollTrigger += 1
+        simulateDeliveryAndReply(for: message)
+    }
+
+    func openCamera() {
+        if isCameraAvailable {
+            showCamera = true
+        } else {
+            cameraUnavailableAlert = true
+        }
+    }
+
+    func attachFile(at url: URL) {
+        let accessing = url.startAccessingSecurityScopedResource()
+        defer {
+            if accessing { url.stopAccessingSecurityScopedResource() }
+        }
+        guard let data = try? Data(contentsOf: url) else { return }
+        let ext = url.pathExtension.isEmpty ? "dat" : url.pathExtension.lowercased()
+        let fileName = MediaService.save(data, extension: ext)
+        var message = Message(
+            id: "msg-\(UUID().uuidString)",
+            chatID: chatID,
+            senderID: store.currentUserID,
+            text: "",
+            createdAt: Date()
+        )
+        message.attachments = [Attachment(
+            id: "att-\(UUID().uuidString)",
+            kind: .file,
+            fileName: fileName,
+            displayName: url.lastPathComponent,
+            fileSize: Int64(data.count)
+        )]
+        store.addMessage(message)
+        scrollTrigger += 1
+        sendScrollTrigger += 1
         simulateDeliveryAndReply(for: message)
     }
 
@@ -220,6 +267,7 @@ final class ChatViewModel {
         )]
         store.addMessage(message)
         scrollTrigger += 1
+        sendScrollTrigger += 1
         simulateDeliveryAndReply(for: message)
     }
 
@@ -274,23 +322,28 @@ final class ChatViewModel {
     // MARK: - Simulation
 
     private func simulateDeliveryAndReply(for message: Message) {
-        Task { [weak self] in
+        replyTask?.cancel()
+        replyTask = Task { [weak self] in
             guard let self else { return }
             try? await Task.sleep(for: .milliseconds(450))
+            guard !Task.isCancelled else { return }
             var updated = message
             updated.status = .sent
             self.store.updateMessage(updated)
 
             try? await Task.sleep(for: .milliseconds(700))
+            guard !Task.isCancelled else { return }
             updated.status = .delivered
             self.store.updateMessage(updated)
 
             guard let chat = self.chat, chat.kind == .direct else { return }
 
             try? await Task.sleep(for: .milliseconds(500))
+            guard !Task.isCancelled else { return }
             self.store.setTyping(self.chatID, true)
-            try? await Task.sleep(for: .seconds(Double.random(in: 1.4...2.6)))
+            try? await Task.sleep(for: .seconds(Double.random(in: 1.0...2.0)))
             self.store.setTyping(self.chatID, false)
+            guard !Task.isCancelled else { return }
 
             self.markOwnMessagesRead()
 

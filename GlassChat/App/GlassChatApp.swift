@@ -2,15 +2,22 @@ import SwiftUI
 
 @main
 struct GlassChatApp: App {
+    @AppStorage("isLoggedIn") private var isLoggedIn = false
     @State private var dependencies = AppDependencies()
 
     var body: some Scene {
         WindowGroup {
-            RootView()
-                .environment(dependencies.store)
-                .environment(dependencies.appState)
-                .tint(dependencies.store.settings.accent.color)
-                .preferredColorScheme(dependencies.store.settings.appearance.colorScheme)
+            Group {
+                if isLoggedIn {
+                    RootView()
+                } else {
+                    AuthFlowView()
+                }
+            }
+            .environment(dependencies.store)
+            .environment(dependencies.appState)
+            .tint(dependencies.store.settings.accent.color)
+            .preferredColorScheme(dependencies.store.settings.appearance.colorScheme)
         }
     }
 }

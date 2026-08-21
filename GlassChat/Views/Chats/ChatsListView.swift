@@ -206,10 +206,14 @@ struct ChatRowView: View {
     @ViewBuilder
     private var preview: some View {
         if isTyping {
-            Text("typing…")
-                .font(.subheadline)
-                .italic()
-                .foregroundStyle(.tint)
+            HStack(spacing: 5) {
+                Text("typing")
+                    .font(.subheadline)
+                    .foregroundStyle(.tint)
+                TypingDotsView(dotColor: .accentColor, dotSize: 4)
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Someone is typing")
         } else if !store.settings.messagePreviews {
             Text("Message")
                 .font(.subheadline)

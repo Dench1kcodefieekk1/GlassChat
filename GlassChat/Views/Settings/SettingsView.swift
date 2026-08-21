@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SettingsHomeView: View {
     @Environment(DataStore.self) private var store
+    @AppStorage("isLoggedIn") private var isLoggedIn = false
     @State private var model = SettingsViewModel()
     @State private var showEditProfile = false
 
@@ -14,6 +15,7 @@ struct SettingsHomeView: View {
             privacySection
             dataSection
             aboutSection
+            logoutSection
         }
         .navigationTitle("Settings")
         .onChange(of: store.settings) {
@@ -188,6 +190,19 @@ struct SettingsHomeView: View {
                 Text("GlassChat Team")
                     .foregroundStyle(.secondary)
             }
+        }
+    }
+
+    private var logoutSection: some View {
+        Section {
+            Button {
+                Haptics.light()
+                isLoggedIn = false
+            } label: {
+                Label("Log Out", systemImage: "rectangle.portrait.and.arrow.right")
+                    .frame(maxWidth: .infinity)
+            }
+            .foregroundStyle(.red)
         }
     }
 }
