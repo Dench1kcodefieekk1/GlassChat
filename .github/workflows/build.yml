@@ -1,0 +1,170 @@
+name: Build GlassChat IPA
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      runner:
+        description: "GitHub Actions runner image"
+        required: false
+        default: "macos-26"
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Archive & Export IPA
+    runs-on: ${{ github.event.inputs.runner || 'macos-26' }}
+    env:
+      SCHEME: GlassChat
+      PROJECT: GlassChat.xcodeproj
+      BUNDLE_ID: com.glasschat.app
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show toolchain
+        run: |
+          xcodebuild -version
+          swift --version || true
+          xcrun simctl list runtimes | head -n 20 || true
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Detect signing configuration
+        id: signing
+        run: |
+          if [ -n "$APPLE_CERTIFICATE_BASE64" ] && [ -n "$PROVISIONING_PROFILE_BASE64" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
+          PROVISIONING_PROFILE_BASE64: ${{ secrets.PROVISIONING_PROFILE_BASE64 }}
+
+      # ------------------------------------------------------------------
+      # Signed path (requires repository secrets, see README)
+      # ------------------------------------------------------------------
+      - name: Import signing certificate
+        if: steps.signing.outputs.available == 'true'
+        env:
+          APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          KEYCHAIN_PATH="$RUNNER_TEMP/glasschat-build.keychain-db"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-options -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          CERT_PATH="$RUNNER_TEMP/certificate.p12"
+          echo "$APPLE_CERTIFICATE_BASE64" | base64 -D > "$CERT_PATH"
+          security import "$CERT_PATH" -k "$KEYCHAIN_PATH" -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security list-keychain -d user -s "$KEYCHAIN_PATH" login.keychain-db
+
+      - name: Install provisioning profile
+        if: steps.signing.outputs.available == 'true'
+        env:
+          PROVISIONING_PROFILE_BASE64: ${{ secrets.PROVISIONING_PROFILE_BASE64 }}
+          PROVISIONING_PROFILE_NAME: ${{ secrets.PROVISIONING_PROFILE_NAME }}
+        run: |
+          PROFILES_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
+          mkdir -p "$PROFILES_DIR"
+          echo "$PROVISIONING_PROFILE_BASE64" | base64 -D > "$PROFILES_DIR/$PROVISIONING_PROFILE_NAME.mobileprovision"
+
+      - name: Generate ExportOptions.plist
+        if: steps.signing.outputs.available == 'true'
+        env:
+          TEAM_ID: ${{ secrets.TEAM_ID }}
+          PROVISIONING_PROFILE_NAME: ${{ secrets.PROVISIONING_PROFILE_NAME }}
+        run: |
+          mkdir -p build
+          cat > build/ExportOptions.plist <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>ad-hoc</string>
+            <key>teamID</key>
+            <string>${TEAM_ID}</string>
+            <key>signingStyle</key>
+            <string>manual</string>
+            <key>stripSwiftSymbols</key>
+            <true/>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>${BUNDLE_ID}</key>
+              <string>${PROVISIONING_PROFILE_NAME}</string>
+            </dict>
+          </dict>
+          </plist>
+          PLIST
+
+      - name: Archive (signed)
+        if: steps.signing.outputs.available == 'true'
+        env:
+          TEAM_ID: ${{ secrets.TEAM_ID }}
+          PROVISIONING_PROFILE_NAME: ${{ secrets.PROVISIONING_PROFILE_NAME }}
+        run: |
+          xcodebuild \
+            -project "$PROJECT" \
+            -scheme "$SCHEME" \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath build/GlassChat.xcarchive \
+            DEVELOPMENT_TEAM="$TEAM_ID" \
+            CODE_SIGN_STYLE=Manual \
+            PROVISIONING_PROFILE_SPECIFIER="$PROVISIONING_PROFILE_NAME" \
+            archive
+
+      - name: Export signed IPA
+        if: steps.signing.outputs.available == 'true'
+        run: |
+          xcodebuild \
+            -exportArchive \
+            -archivePath build/GlassChat.xcarchive \
+            -exportOptionsPlist build/ExportOptions.plist \
+            -exportPath export
+
+      # ------------------------------------------------------------------
+      # Unsigned path (no secrets): produces an unsigned IPA artifact
+      # ------------------------------------------------------------------
+      - name: Archive (unsigned)
+        if: steps.signing.outputs.available == 'false'
+        run: |
+          xcodebuild \
+            -project "$PROJECT" \
+            -scheme "$SCHEME" \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath build/GlassChat.xcarchive \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            archive
+
+      - name: Package unsigned IPA
+        if: steps.signing.outputs.available == 'false'
+        run: |
+          mkdir -p export/Payload
+          cp -R "build/GlassChat.xcarchive/Products/Applications/GlassChat.app" export/Payload/
+          cd export
+          zip -qry GlassChat.ipa Payload
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: GlassChat-iOS
+          path: export/GlassChat.ipa
+          if-no-files-found: error
