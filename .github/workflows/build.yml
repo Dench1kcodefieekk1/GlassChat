@@ -1,4 +1,4 @@
-name: Build GlassChat IPA
+name: Build iOS
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       runner:
-        description: "GitHub Actions runner image"
+        description: "macOS runner image (must ship Xcode 26)"
         required: false
         default: "macos-26"
 
@@ -27,32 +27,54 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Show toolchain
+      # ------------------------------------------------------------------
+      # Toolchain: pick the newest Xcode installed on the runner, then
+      # install XcodeGen which generates GlassChat.xcodeproj from project.yml
+      # ------------------------------------------------------------------
+      - name: Select latest Xcode
         run: |
+          XCODE_APP=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)
+          if [ -n "$XCODE_APP" ]; then
+            echo "Selecting $XCODE_APP"
+            sudo xcode-select -s "$XCODE_APP/Contents/Developer"
+          fi
+          xcode-select -p
           xcodebuild -version
-          swift --version || true
-          xcrun simctl list runtimes | head -n 20 || true
 
       - name: Install XcodeGen
-        run: brew install xcodegen
+        run: |
+          export HOMEBREW_NO_AUTO_UPDATE=1
+          export HOMEBREW_NO_INSTALL_UPGRADE=1
+          brew install xcodegen
+          xcodegen --version
 
       - name: Generate Xcode project
-        run: xcodegen generate
+        run: |
+          xcodegen generate
+          test -d "$PROJECT" || { echo "::error::$PROJECT was not generated"; exit 1; }
+          echo "Generated $PROJECT"
 
+      # ------------------------------------------------------------------
+      # Decide build mode: signed (secrets present) vs unsigned (CI smoke)
+      # ------------------------------------------------------------------
       - name: Detect signing configuration
         id: signing
         run: |
-          if [ -n "$APPLE_CERTIFICATE_BASE64" ] && [ -n "$PROVISIONING_PROFILE_BASE64" ]; then
+          if [ -n "$APPLE_CERTIFICATE_BASE64" ] && [ -n "$PROVISIONING_PROFILE_BASE64" ] && [ -n "$TEAM_ID" ]; then
             echo "available=true" >> "$GITHUB_OUTPUT"
+            echo "mode=SIGNED_AD_HOC" >> "$GITHUB_OUTPUT"
           else
             echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "mode=UNSIGNED_TEST" >> "$GITHUB_OUTPUT"
           fi
         env:
           APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
           PROVISIONING_PROFILE_BASE64: ${{ secrets.PROVISIONING_PROFILE_BASE64 }}
+          TEAM_ID: ${{ secrets.TEAM_ID }}
 
       # ------------------------------------------------------------------
-      # Signed path (requires repository secrets, see README)
+      # SIGNED PATH — produces an installable Ad Hoc IPA.
+      # Requires the repository secrets documented in README.md.
       # ------------------------------------------------------------------
       - name: Import signing certificate
         if: steps.signing.outputs.available == 'true'
@@ -68,8 +90,10 @@ jobs:
 
           CERT_PATH="$RUNNER_TEMP/certificate.p12"
           echo "$APPLE_CERTIFICATE_BASE64" | base64 -D > "$CERT_PATH"
-          security import "$CERT_PATH" -k "$KEYCHAIN_PATH" -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
-          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security import "$CERT_PATH" -k "$KEYCHAIN_PATH" \
+            -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s \
+            -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
           security list-keychain -d user -s "$KEYCHAIN_PATH" login.keychain-db
 
       - name: Install provisioning profile
@@ -80,7 +104,9 @@ jobs:
         run: |
           PROFILES_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
           mkdir -p "$PROFILES_DIR"
-          echo "$PROVISIONING_PROFILE_BASE64" | base64 -D > "$PROFILES_DIR/$PROVISIONING_PROFILE_NAME.mobileprovision"
+          echo "$PROVISIONING_PROFILE_BASE64" | base64 -D \
+            > "$PROFILES_DIR/$PROVISIONING_PROFILE_NAME.mobileprovision"
+          echo "Profile installed at: $PROFILES_DIR/$PROVISIONING_PROFILE_NAME.mobileprovision"
 
       - name: Generate ExportOptions.plist
         if: steps.signing.outputs.available == 'true'
@@ -138,7 +164,9 @@ jobs:
             -exportPath export
 
       # ------------------------------------------------------------------
-      # Unsigned path (no secrets): produces an unsigned IPA artifact
+      # UNSIGNED PATH — no secrets needed. Verifies the project compiles
+      # and packages on CI. The resulting IPA CANNOT be installed on a
+      # physical iPhone (see README → PHYSICAL IPHONE mode).
       # ------------------------------------------------------------------
       - name: Archive (unsigned)
         if: steps.signing.outputs.available == 'false'
@@ -162,9 +190,28 @@ jobs:
           cd export
           zip -qry GlassChat.ipa Payload
 
+      # ------------------------------------------------------------------
+      # Artifact
+      # ------------------------------------------------------------------
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
         with:
           name: GlassChat-iOS
           path: export/GlassChat.ipa
           if-no-files-found: error
+
+      - name: Build summary
+        if: always()
+        run: |
+          {
+            echo "## GlassChat build"
+            echo ""
+            echo "- Mode: **${{ steps.signing.outputs.mode }}**"
+            echo "- Scheme: \`$SCHEME\` (Release)"
+            echo "- Artifact: **GlassChat-iOS** → \`GlassChat.ipa\`"
+            if [ "${{ steps.signing.outputs.available }}" = "false" ]; then
+              echo ""
+              echo "> Unsigned build: verifies compilation only. It cannot be installed on a physical iPhone."
+              echo "> To get an installable IPA, add the signing secrets described in README.md (PHYSICAL IPHONE mode)."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
