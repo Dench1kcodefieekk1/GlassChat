@@ -25,7 +25,7 @@ jobs:
       BUNDLE_ID: com.glasschat.app
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       # ------------------------------------------------------------------
       # Toolchain: pick the newest Xcode installed on the runner, then
@@ -143,6 +143,8 @@ jobs:
           TEAM_ID: ${{ secrets.TEAM_ID }}
           PROVISIONING_PROFILE_NAME: ${{ secrets.PROVISIONING_PROFILE_NAME }}
         run: |
+          mkdir -p build
+          set -o pipefail
           xcodebuild \
             -project "$PROJECT" \
             -scheme "$SCHEME" \
@@ -152,7 +154,7 @@ jobs:
             DEVELOPMENT_TEAM="$TEAM_ID" \
             CODE_SIGN_STYLE=Manual \
             PROVISIONING_PROFILE_SPECIFIER="$PROVISIONING_PROFILE_NAME" \
-            archive
+            archive 2>&1 | tee build-archive.log
 
       - name: Export signed IPA
         if: steps.signing.outputs.available == 'true'
@@ -171,6 +173,8 @@ jobs:
       - name: Archive (unsigned)
         if: steps.signing.outputs.available == 'false'
         run: |
+          mkdir -p build
+          set -o pipefail
           xcodebuild \
             -project "$PROJECT" \
             -scheme "$SCHEME" \
@@ -180,7 +184,7 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
-            archive
+            archive 2>&1 | tee build-archive.log
 
       - name: Package unsigned IPA
         if: steps.signing.outputs.available == 'false'
@@ -190,11 +194,36 @@ jobs:
           cd export
           zip -qry GlassChat.ipa Payload
 
+      - name: Extract build errors into summary
+        if: failure()
+        run: |
+          if [ -f build-archive.log ]; then
+            {
+              echo "## Build errors"
+              echo '```'
+              grep -E "error:|error generated|Command .* failed" build-archive.log | sort -u | head -n 40 || true
+              echo '```'
+              echo ""
+              echo "### Log tail"
+              echo '```'
+              tail -n 60 build-archive.log
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload build logs (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v5
+        with:
+          name: build-logs
+          path: build-archive.log
+          if-no-files-found: ignore
+
       # ------------------------------------------------------------------
       # Artifact
       # ------------------------------------------------------------------
       - name: Upload IPA artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: GlassChat-iOS
           path: export/GlassChat.ipa
