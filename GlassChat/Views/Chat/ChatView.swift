@@ -5,6 +5,7 @@ import UniformTypeIdentifiers
 
 struct ChatView: View {
     @Environment(DataStore.self) private var store
+    @Environment(\.dismiss) private var dismiss
     @State private var model: ChatViewModel
 
     init(chatID: String, store: DataStore) {
@@ -13,15 +14,11 @@ struct ChatView: View {
 
     var body: some View {
         messageList
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .principal) {
-                    header
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    moreMenu
-                }
+            .safeAreaInset(edge: .top, spacing: 0) {
+                chatHeader
             }
+            .toolbar(.hidden, for: .navigationBar)
+            .toolbar(.hidden, for: .tabBar)
             .background(Color(uiColor: .systemGroupedBackground))
             .onAppear { model.activate() }
             .onDisappear { model.deactivate() }
@@ -60,6 +57,9 @@ struct ChatView: View {
                     model.sendImage(pending, caption: caption)
                 }
             }
+            .sheet(isPresented: $model.showAttachmentSheet) {
+                AttachmentSheet(model: model)
+            }
             .fullScreenCover(isPresented: $model.showCamera) {
                 CameraPicker { image in
                     model.pendingImage = PendingImage(image: image)
@@ -92,6 +92,36 @@ struct ChatView: View {
     }
 
     // MARK: - Header
+
+    private var chatHeader: some View {
+        HStack(spacing: 8) {
+            Button {
+                dismiss()
+            } label: {
+                Image(systemName: "chevron.backward")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.primary)
+                    .frame(width: 34, height: 34)
+                    .contentShape(Circle())
+            }
+            .buttonStyle(PressScaleButtonStyle(scale: 0.88))
+            .accessibilityLabel("Back")
+
+            Spacer(minLength: 0)
+
+            header
+
+            Spacer(minLength: 0)
+
+            moreMenu
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .glassEffect(.regular.interactive(), in: Capsule())
+        .padding(.horizontal, 8)
+        .padding(.top, 4)
+        .padding(.bottom, 8)
+    }
 
     @ViewBuilder
     private var header: some View {
@@ -163,6 +193,10 @@ struct ChatView: View {
             }
         } label: {
             Image(systemName: "ellipsis")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(.primary)
+                .frame(width: 34, height: 34)
+                .contentShape(Circle())
         }
         .accessibilityLabel("Chat options")
     }

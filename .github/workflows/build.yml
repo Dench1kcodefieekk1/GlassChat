@@ -257,6 +257,14 @@ jobs:
           path: export/GlassChat.ipa
           if-no-files-found: error
 
+      - name: Upload xcarchive (diagnostics)
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: GlassChat-xcarchive
+          path: build/GlassChat.xcarchive
+          if-no-files-found: ignore
+
       - name: Build summary
         if: always()
         run: |

@@ -19,23 +19,6 @@ struct MessageComposer: View {
     private var hasDraft: Bool { !model.draft.trimmed.isEmpty }
 
     var body: some View {
-        Group {
-            if model.recorder.isRecording {
-                recordingPanel
-            } else {
-                inputArea
-            }
-        }
-        .padding(10)
-        .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 26, style: .continuous))
-        .padding(.horizontal, 8)
-        .padding(.bottom, 4)
-        .sensoryFeedback(.impact(weight: .light), trigger: model.recorder.isRecording)
-    }
-
-    // MARK: - Input
-
-    private var inputArea: some View {
         VStack(spacing: 8) {
             if let reply = model.replyTo {
                 banner(
@@ -51,81 +34,87 @@ struct MessageComposer: View {
                 }
             }
 
-            HStack(alignment: .bottom, spacing: 8) {
-                HStack(spacing: 2) {
-                    attachButton("photo", label: "Photo library") {
-                        model.showPhotoPicker = true
-                    }
-                    attachButton("camera", label: "Camera") {
-                        model.openCamera()
-                    }
-                    attachButton("paperclip", label: "Attach file") {
-                        model.showFilePicker = true
-                    }
+            if model.recorder.isRecording {
+                recordingPanel
+            } else {
+                HStack(alignment: .bottom, spacing: 8) {
+                    attachmentButton
+                    inputField
+                    actionButton
                 }
-
-                TextField("Message", text: $model.draft, axis: .vertical)
-                    .lineLimit(1...5)
-                    .focused($focused)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 8)
-                    .background(
-                        Color(uiColor: .tertiarySystemFill),
-                        in: RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    )
-                    .onSubmit {
-                        if store.settings.enterToSend, hasDraft {
-                            sendMessage()
-                        }
-                    }
-                    .accessibilityLabel("Message text")
-
-                micOrSend
             }
         }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+        .sensoryFeedback(.impact(weight: .light), trigger: model.recorder.isRecording)
     }
 
-    private func sendMessage() {
-        Haptics.medium()
-        model.send()
-    }
+    // MARK: - Attachment
 
-    private func attachButton(_ symbol: String, label: String, action: @escaping () -> Void) -> some View {
+    private var attachmentButton: some View {
         Button {
             Haptics.light()
-            action()
+            model.showAttachmentSheet = true
         } label: {
-            Image(systemName: symbol)
-                .font(.system(size: 17, weight: .medium))
+            Image(systemName: "paperclip")
+                .font(.system(size: 19, weight: .medium))
                 .foregroundStyle(.tint)
-                .frame(width: 32, height: 32)
-                .background(.quaternary.opacity(0.6), in: Circle())
+                .frame(width: 44, height: 44)
+                .contentShape(Circle())
         }
-        .buttonStyle(PressScaleButtonStyle())
-        .accessibilityLabel(label)
+        .buttonStyle(PressScaleButtonStyle(scale: 0.9))
+        .glassEffect(.regular.interactive(), in: Circle())
+        .accessibilityLabel("Add attachment")
     }
 
-    @ViewBuilder
-    private var micOrSend: some View {
+    // MARK: - Input field
+
+    private var inputField: some View {
+        HStack(alignment: .bottom, spacing: 4) {
+            TextField("Message", text: $model.draft, axis: .vertical)
+                .lineLimit(1...5)
+                .focused($focused)
+                .onSubmit {
+                    if store.settings.enterToSend, hasDraft {
+                        sendMessage()
+                    }
+                }
+                .accessibilityLabel("Message text")
+
+            Button {
+                Haptics.light()
+                focused = true
+            } label: {
+                Image(systemName: "face.smiling")
+                    .font(.system(size: 20, weight: .medium))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 32, height: 32)
+                    .contentShape(Circle())
+            }
+            .buttonStyle(PressScaleButtonStyle(scale: 0.85))
+            .accessibilityLabel("Emoji")
+        }
+        .padding(.leading, 15)
+        .padding(.trailing, 8)
+        .padding(.vertical, 7)
+        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 23, style: .continuous))
+    }
+
+    // MARK: - Mic / Send
+
+    private var actionButton: some View {
         ZStack {
             if hasDraft {
                 Button {
                     sendMessage()
                 } label: {
-                    Image(systemName: "paperplane.fill")
-                        .font(.system(size: 17, weight: .semibold))
+                    Image(systemName: "arrow.up")
+                        .font(.system(size: 18, weight: .bold))
                         .foregroundStyle(.white)
-                        .frame(width: 38, height: 38)
-                        .background(
-                            LinearGradient(
-                                colors: [.accentColor, .accentColor.opacity(0.75)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ),
-                            in: Circle()
-                        )
+                        .frame(width: 44, height: 44)
+                        .contentShape(Circle())
                 }
-                .buttonStyle(PressScaleButtonStyle(scale: 0.85))
+                .buttonStyle(PressScaleButtonStyle(scale: 0.88))
                 .transition(.scale.combined(with: .opacity))
                 .accessibilityLabel(model.editingMessage == nil ? "Send message" : "Save edit")
             } else {
@@ -136,15 +125,24 @@ struct MessageComposer: View {
                     Image(systemName: "mic.fill")
                         .font(.system(size: 19, weight: .medium))
                         .foregroundStyle(.tint)
-                        .frame(width: 38, height: 38)
-                        .background(.quaternary.opacity(0.6), in: Circle())
+                        .frame(width: 44, height: 44)
+                        .contentShape(Circle())
                 }
-                .buttonStyle(PressScaleButtonStyle())
+                .buttonStyle(PressScaleButtonStyle(scale: 0.9))
                 .transition(.scale.combined(with: .opacity))
                 .accessibilityLabel("Record voice message")
             }
         }
-        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: hasDraft)
+        .animation(.spring(response: 0.32, dampingFraction: 0.7), value: hasDraft)
+        .glassEffect(
+            hasDraft ? .regular.tint(.accentColor) : .regular.interactive(),
+            in: Circle()
+        )
+    }
+
+    private func sendMessage() {
+        Haptics.medium()
+        model.send()
     }
 
     private func banner(title: String, detail: String, onCancel: @escaping () -> Void) -> some View {
@@ -218,15 +216,19 @@ struct MessageComposer: View {
                 Haptics.medium()
                 model.sendRecording()
             } label: {
-                Image(systemName: "paperplane.fill")
-                    .font(.system(size: 17, weight: .semibold))
+                Image(systemName: "arrow.up")
+                    .font(.system(size: 18, weight: .bold))
                     .foregroundStyle(.white)
-                    .frame(width: 38, height: 38)
-                    .background(Color.accentColor, in: Circle())
+                    .frame(width: 44, height: 44)
+                    .contentShape(Circle())
             }
-            .buttonStyle(PressScaleButtonStyle(scale: 0.85))
+            .buttonStyle(PressScaleButtonStyle(scale: 0.88))
+            .glassEffect(.regular.tint(.accentColor), in: Circle())
             .accessibilityLabel("Send voice message")
         }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 26, style: .continuous))
         .contentShape(Rectangle())
         .gesture(
             DragGesture(minimumDistance: 20)
@@ -253,5 +255,70 @@ struct LiveWaveform: View {
             }
         }
         .animation(.linear(duration: 0.08), value: samples.count)
+    }
+}
+
+// MARK: - Attachment sheet
+
+struct AttachmentSheet: View {
+    @Bindable var model: ChatViewModel
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(spacing: 12) {
+            Capsule()
+                .fill(Color(uiColor: .tertiarySystemFill))
+                .frame(width: 36, height: 5)
+                .padding(.top, 10)
+
+            Text("Attach")
+                .font(.headline)
+
+            VStack(spacing: 8) {
+                option(symbol: "photo.on.rectangle", title: "Photo or Video", tint: .blue) {
+                    model.showPhotoPicker = true
+                }
+                option(symbol: "camera", title: "Camera", tint: .red) {
+                    model.openCamera()
+                }
+                option(symbol: "folder", title: "File", tint: .orange) {
+                    model.showFilePicker = true
+                }
+            }
+            .padding(.horizontal, 16)
+
+            Spacer(minLength: 8)
+        }
+        .presentationDetents([.height(280)])
+        .presentationDragIndicator(.hidden)
+    }
+
+    private func option(symbol: String, title: String, tint: Color, action: @escaping () -> Void) -> some View {
+        Button {
+            Haptics.light()
+            dismiss()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                action()
+            }
+        } label: {
+            HStack(spacing: 14) {
+                Image(systemName: symbol)
+                    .font(.system(size: 17, weight: .medium))
+                    .foregroundStyle(.white)
+                    .frame(width: 40, height: 40)
+                    .background(tint.gradient, in: Circle())
+                Text(title)
+                    .font(.body.weight(.medium))
+                    .foregroundStyle(.primary)
+                Spacer()
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(
+                Color(uiColor: .secondarySystemGroupedBackground),
+                in: RoundedRectangle(cornerRadius: 16, style: .continuous)
+            )
+        }
+        .buttonStyle(PressScaleButtonStyle(scale: 0.97))
     }
 }

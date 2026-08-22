@@ -89,6 +89,9 @@ use Mode B.
 3. Scroll to **Artifacts** → click **GlassChat-iOS**
 4. Unzip the download; `GlassChat.ipa` is inside
 
+A second artifact, **`GlassChat-xcarchive`**, is uploaded for diagnostics
+(the full `.xcarchive` produced by `xcodebuild archive`).
+
 Artifacts are kept for 90 days by default.
 
 ---
@@ -242,7 +245,7 @@ Connect API key (`xcrun altool` / `xcrun notarytool`-style tooling or
 | Area | What works |
 | --- | --- |
 | Chats list | Pinned, muted, unread badges, verified marks, typing indicator, swipe actions (pin / read / delete), context menu, pull-to-refresh |
-| Chat screen | Bubbles with tails, date & unread separators, reply previews, edited/deleted states, delivery checkmarks, reactions, copy/forward/edit/delete, emoji-only messages, Markdown inline links |
+| Chat screen | Telegram-style composer (separate glass attachment button, expanding message field with emoji button, animated mic ↔ send button), full-screen layout with a custom floating Liquid Glass header (no system navigation/tab bars), bubbles with tails, date & unread separators, reply previews, edited/deleted states, delivery checkmarks, reactions, copy/forward/edit/delete, emoji-only messages, Markdown inline links |
 | Sending | Instant local send with simulated `sending → sent → delivered → read`, simulated typing + replies in direct chats |
 | Photos | PhotosPicker, caption preview sheet, in-bubble thumbnails, full-screen viewer with pinch-to-zoom, ShareLink |
 | Camera | System camera capture (on devices that have one) |

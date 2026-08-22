@@ -44,6 +44,7 @@ final class ChatViewModel {
     var showPhotoPicker = false
     var showCamera = false
     var showFilePicker = false
+    var showAttachmentSheet = false
     var cameraUnavailableAlert = false
     var recordingDenied = false
     var scrollTrigger = 0
