@@ -81,7 +81,7 @@ private struct GiftCell: View {
             return AnyShapeStyle(LinearGradient(colors: [Color.teal.opacity(0.32), Color.mint.opacity(0.2)],
                                                 startPoint: .top, endPoint: .bottom))
         case .goldStar:
-            return AnyShapeStyle(LinearGradient(colors: [Color.amber.opacity(0.35), Color.yellow.opacity(0.18)],
+            return AnyShapeStyle(LinearGradient(colors: [Color(red: 1.0, green: 0.76, blue: 0.2).opacity(0.35), Color.yellow.opacity(0.18)],
                                                 startPoint: .topLeading, endPoint: .bottomTrailing))
         case .rainbowNyanCat:
             return AnyShapeStyle(LinearGradient(colors: [Color.pink.opacity(0.35), Color.purple.opacity(0.3), Color.blue.opacity(0.2)],
