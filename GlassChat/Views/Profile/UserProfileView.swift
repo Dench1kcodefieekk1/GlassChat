@@ -11,6 +11,7 @@ struct UserProfileView: View {
     @State private var viewerItem: ViewerItem?
     @State private var photoExpanded = false
     @State private var showRating = false
+    @State private var showFramePicker = false
     @Namespace private var avatarNamespace
 
     private var me: User { store.currentUser }
@@ -59,6 +60,9 @@ struct UserProfileView: View {
             .sheet(isPresented: $showRating) {
                 UserRatingSheetView()
             }
+            .sheet(isPresented: $showFramePicker) {
+                AvatarFramePickerSheet()
+            }
             .overlay(alignment: .bottom) {
                 if let toast {
                     Text(toast)
@@ -81,16 +85,25 @@ struct UserProfileView: View {
 
     // MARK: - Header
 
-    /// Clean centered avatar on the solid background — no banner or glow.
+    /// Clean centered avatar on the solid background, wrapped in the
+    /// equipped decoration frame.
     private var header: some View {
         VStack(spacing: 10) {
-            avatar
-                .onTapGesture {
-                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                        photoExpanded = true
-                    }
+            AvatarFrameOverlayView(
+                frame: AvatarFrameManager.activeFrame(
+                    selectedID: me.selectedFrameId,
+                    level: UserLevelManager.shared.currentLevel
+                ),
+                avatarSize: 108
+            ) {
+                avatar
+            }
+            .onTapGesture {
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                    photoExpanded = true
                 }
-                .accessibilityLabel("Expand profile photo")
+            }
+            .accessibilityLabel("Expand profile photo")
 
             HStack(spacing: 6) {
                 levelBadge
@@ -108,6 +121,16 @@ struct UserProfileView: View {
             Text("@\(me.username)")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
+
+            Button {
+                Haptics.light()
+                showFramePicker = true
+            } label: {
+                Label("Изменить рамку", systemImage: "paintbrush")
+                    .font(.caption.weight(.semibold))
+            }
+            .foregroundStyle(.tint)
+            .accessibilityLabel("Change avatar frame")
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 8)

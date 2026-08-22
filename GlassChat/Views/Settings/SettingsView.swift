@@ -40,13 +40,21 @@ struct SettingsHomeView: View {
                 UserProfileView()
             } label: {
                 HStack(spacing: 14) {
-                    AvatarView(
-                        title: me.name,
-                        seed: me.id,
-                        size: 62,
-                        isOnline: true,
-                        fileName: me.avatarFileName
-                    )
+                    AvatarFrameOverlayView(
+                        frame: AvatarFrameManager.activeFrame(
+                            selectedID: me.selectedFrameId,
+                            level: UserLevelManager.shared.currentLevel
+                        ),
+                        avatarSize: 62
+                    ) {
+                        AvatarView(
+                            title: me.name,
+                            seed: me.id,
+                            size: 62,
+                            isOnline: true,
+                            fileName: me.avatarFileName
+                        )
+                    }
                     VStack(alignment: .leading, spacing: 2) {
                         Text(me.name)
                             .font(.title3.weight(.semibold))

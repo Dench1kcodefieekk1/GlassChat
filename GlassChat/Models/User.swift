@@ -17,6 +17,8 @@ struct User: Identifiable, Codable, Hashable {
     var personalAccent: AccentChoice? = nil
     var linkedChannel: String? = nil
     var bannerFileName: String? = nil
+    /// Equipped Discord-style avatar decoration (see `AvatarFrameManager`).
+    var selectedFrameId: String? = nil
 
     var initials: String {
         name.split(separator: " ").prefix(2).compactMap { $0.first.map(String.init) }.joined()
@@ -41,7 +43,7 @@ struct User: Identifiable, Codable, Hashable {
 extension User {
     private enum CodingKeys: String, CodingKey {
         case id, name, username, bio, phone, isVerified, isOnline, lastSeen
-        case avatarFileName, registeredAt, personalAccent, linkedChannel, bannerFileName
+        case avatarFileName, registeredAt, personalAccent, linkedChannel, bannerFileName, selectedFrameId
     }
 
     init(from decoder: Decoder) throws {
@@ -61,5 +63,6 @@ extension User {
         personalAccent = try container.decodeIfPresent(AccentChoice.self, forKey: .personalAccent)
         linkedChannel = try container.decodeIfPresent(String.self, forKey: .linkedChannel)
         bannerFileName = try container.decodeIfPresent(String.self, forKey: .bannerFileName)
+        selectedFrameId = try container.decodeIfPresent(String.self, forKey: .selectedFrameId)
     }
 }

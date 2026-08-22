@@ -81,6 +81,7 @@ final class UserLevelManager {
     /// Adds XP and cascades level-ups (XP carries over between levels).
     func addXP(_ amount: Int) {
         guard amount > 0 else { return }
+        let previousLevel = currentLevel
         currentXP += amount
         while currentLevel < Self.maxLevel && currentXP >= requiredXP {
             currentXP -= requiredXP
@@ -90,6 +91,11 @@ final class UserLevelManager {
             currentXP = min(currentXP, requiredXP)
         }
         persist()
+
+        if currentLevel > previousLevel {
+            // Sound effect + glowing celebration banner + success haptic.
+            LevelUpAudioNotifier.shared.levelUp(to: currentLevel)
+        }
     }
 
     /// +10 XP per message plus +1 XP per character.

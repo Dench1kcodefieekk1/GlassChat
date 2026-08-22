@@ -16,11 +16,19 @@ struct MessageRow: View {
             if isOwn { Spacer(minLength: 48) }
 
             if showSenderName {
-                AvatarView(
-                    title: store.displayName(of: message),
-                    seed: message.senderID,
-                    size: 26
-                )
+                AvatarFrameOverlayView(
+                    frame: AvatarFrameManager.activeFrame(
+                        selectedID: store.user(id: message.senderID)?.selectedFrameId,
+                        level: UserLevelManager.shared.currentLevel
+                    ),
+                    avatarSize: 26
+                ) {
+                    AvatarView(
+                        title: store.displayName(of: message),
+                        seed: message.senderID,
+                        size: 26
+                    )
+                }
             }
 
             VStack(alignment: isOwn ? .trailing : .leading, spacing: 4) {
