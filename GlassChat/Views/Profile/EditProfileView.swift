@@ -9,7 +9,7 @@ struct EditProfileView: View {
     @State private var lastName: String
     @State private var bio: String
     @State private var username: String
-    @AppStorage("userPhone") private var phone = "+380 99 123 4567"
+    @State private var phone: String
     @State private var personalAccent: AccentChoice
     @State private var linkedChannel: String
     @State private var pendingAvatar: UIImage?
@@ -23,6 +23,7 @@ struct EditProfileView: View {
         _lastName = State(initialValue: "")
         _bio = State(initialValue: "")
         _username = State(initialValue: "")
+        _phone = State(initialValue: "")
         _personalAccent = State(initialValue: .blue)
         _linkedChannel = State(initialValue: "")
     }
@@ -202,6 +203,7 @@ struct EditProfileView: View {
         lastName = parts.count > 1 ? parts[1] : ""
         bio = me.bio
         username = me.username
+        phone = me.phone
         personalAccent = me.personalAccent ?? store.settings.accent
         linkedChannel = me.linkedChannel ?? ""
     }

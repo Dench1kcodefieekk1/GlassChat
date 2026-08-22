@@ -5,7 +5,6 @@ struct SettingsHomeView: View {
     @AppStorage("isLoggedIn") private var isLoggedIn = false
     @State private var model = SettingsViewModel()
     @State private var showAddAccount = false
-    @AppStorage("userPhone") private var userPhone = "+380 99 123 4567"
 
     private var me: User { store.currentUser }
 
@@ -55,7 +54,7 @@ struct SettingsHomeView: View {
                         Text("@\(me.username)")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
-                        Text(userPhone)
+                        Text(me.phone)
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -113,7 +112,7 @@ struct SettingsHomeView: View {
                 switchAccount(to: User.currentID)
             } label: {
                 accountRow(name: store.user(id: User.currentID)?.name ?? "Alex",
-                           phone: userPhone,
+                           phone: store.user(id: User.currentID)?.phone ?? "",
                            isSelected: store.currentUserID == User.currentID)
             }
             ForEach(store.settings.linkedAccounts) { account in

@@ -306,6 +306,15 @@ final class DataStore {
         return chat
     }
 
+    /// Persists the phone number entered at registration onto the active
+    /// session user; the profile binds directly to `currentUser.phone`.
+    func updateCurrentUserPhone(_ number: String) {
+        guard var user = users[currentUserID] else { return }
+        user.phone = number
+        users[currentUserID] = user
+        save()
+    }
+
     // MARK: - Search
 
     func searchMessages(_ query: String, limit: Int = 20) -> [Message] {

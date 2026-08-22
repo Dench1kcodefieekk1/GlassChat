@@ -7,6 +7,7 @@ enum AuthStep: Hashable {
 
 struct AuthFlowView: View {
     @AppStorage("isLoggedIn") private var isLoggedIn = false
+    @Environment(DataStore.self) private var store
     @State private var path: [AuthStep] = []
 
     var body: some View {
@@ -26,6 +27,10 @@ struct AuthFlowView: View {
                         phoneNumber: number,
                         onAuthenticated: {
                             Haptics.success()
+                            // The number entered at registration becomes the
+                            // active session user's phone — the profile binds
+                            // directly to currentUser.phone.
+                            store.updateCurrentUserPhone(number)
                             isLoggedIn = true
                         },
                         onBack: {

@@ -4,13 +4,14 @@ import UIKit
 struct UserProfileView: View {
     @Environment(DataStore.self) private var store
     @Environment(AppState.self) private var appState
-    @AppStorage("userPhone") private var userPhone = "+380 99 123 4567"
     @State private var showCompose = false
     @State private var showCall = false
     @State private var toast: String?
     @State private var mediaTab: ProfileMediaTab = .media
     @State private var viewerItem: ViewerItem?
     @State private var photoExpanded = false
+    @State private var giftsModel = GiftsViewModel()
+    @State private var selectedGift: GiftItem?
     @Namespace private var avatarNamespace
 
     private var me: User { store.currentUser }
@@ -205,7 +206,7 @@ struct UserProfileView: View {
 
     private var infoCard: some View {
         VStack(spacing: 0) {
-            infoRow(icon: "phone.fill", color: .green, title: userPhone, subtitle: "Phone", copyable: true)
+            infoRow(icon: "phone.fill", color: .green, title: me.phone, subtitle: "Phone", copyable: true)
             divider
             infoRow(icon: "at", color: .orange, title: "@\(me.username)", subtitle: "Username", copyable: true)
             if !me.bio.isEmpty {
@@ -311,9 +312,36 @@ struct UserProfileView: View {
                 filesList
             case .links:
                 linksList
+            case .gifts:
+                giftsGrid
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder
+    private var giftsGrid: some View {
+        GiftsGridView(gifts: giftsModel.gifts) { gift in
+            Haptics.light()
+            selectedGift = gift
+        }
+        .sheet(item: $selectedGift) { gift in
+            if gift.kind.rarity == .nft {
+                NFTGiftDetailView(
+                    gift: gift,
+                    ownerName: me.name,
+                    isWorn: giftsModel.isWorn(gift),
+                    onToggleVisibility: { giftsModel.toggleHidden(gift) },
+                    onWear: { giftsModel.toggleWorn(gift) }
+                )
+            } else {
+                StandardGiftDetailView(
+                    gift: gift,
+                    onToggleVisibility: { giftsModel.toggleHidden(gift) },
+                    onSendGift: { showToast("Подарок отправлен") }
+                )
+            }
+        }
     }
 
     private var myMedia: [SharedMediaItem] {
@@ -453,6 +481,7 @@ enum ProfileMediaTab: String, CaseIterable, Identifiable {
     case media
     case files
     case links
+    case gifts
 
     var id: String { rawValue }
 
@@ -461,6 +490,7 @@ enum ProfileMediaTab: String, CaseIterable, Identifiable {
         case .media: return "Media"
         case .files: return "Files"
         case .links: return "Links"
+        case .gifts: return "Gifts"
         }
     }
 }
