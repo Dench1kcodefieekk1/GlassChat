@@ -6,6 +6,7 @@ struct ChatView: View {
     @Environment(DataStore.self) private var store
     @Environment(\.dismiss) private var dismiss
     @State private var model: ChatViewModel
+    private let verification = VerificationManager.shared
 
     init(chatID: String, store: DataStore) {
         _model = State(initialValue: ChatViewModel(chatID: chatID, store: store))
@@ -19,16 +20,20 @@ struct ChatView: View {
             .toolbar(.hidden, for: .navigationBar)
             .toolbar(.hidden, for: .tabBar)
             .background(ChatWallpaperView(wallpaper: store.settings.wallpaper).ignoresSafeArea())
+            .onTapGesture {
+                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+            }
             .onAppear { model.activate() }
             .onDisappear { model.deactivate() }
+            .onChange(of: verification.pendingPillID) { _, pillID in
+                guard let pillID, verification.celebrationChatID == model.chatID else { return }
+                model.triggerConfetti(for: pillID)
+            }
             .onChange(of: store.sortedMessages(for: model.chatID).count) { oldValue, newValue in
                 model.markReadIfActive()
-                if newValue > oldValue,
-                   let last = store.lastMessage(for: model.chatID),
-                   last.senderID != store.currentUserID,
-                   !model.isNearBottom {
-                    model.pendingIncoming += 1
-                } else {
+                // Auto-scroll to the newest message whenever one is appended
+                // (sent or received).
+                if newValue > oldValue {
                     model.scrollTrigger += 1
                 }
             }
@@ -247,9 +252,7 @@ struct ChatView: View {
             }
             .animation(.spring(response: 0.3, dampingFraction: 0.8), value: model.pendingIncoming)
             .onChange(of: model.scrollTrigger) {
-                if model.isNearBottom {
-                    scrollToBottom(proxy: proxy, animated: true)
-                }
+                scrollToBottom(proxy: proxy, animated: true)
             }
             .onChange(of: model.sendScrollTrigger) {
                 scrollToBottom(proxy: proxy, animated: true)

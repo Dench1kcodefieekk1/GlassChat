@@ -25,7 +25,6 @@ struct UserProfileView: View {
                     VStack(spacing: 20) {
                         actions
                         infoCard
-                        verifiedSubtitle
                         mediaSection
                         ProfileMusicSection()
                     }
@@ -226,16 +225,6 @@ struct UserProfileView: View {
         showToast("Banner updated")
     }
 
-    @ViewBuilder
-    private var verifiedSubtitle: some View {
-        if me.isVerified {
-            Text("Verified by Verification")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity)
-        }
-    }
-
     // MARK: - Actions
 
     private var actions: some View {
@@ -293,6 +282,15 @@ struct UserProfileView: View {
             if let channel = me.linkedChannel {
                 divider
                 infoRow(icon: "megaphone.fill", color: .purple, title: channel, subtitle: "Linked Channel", copyable: false)
+            }
+            if me.isVerified {
+                divider
+                Text("Verified by Verification")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
             }
         }
         .background(

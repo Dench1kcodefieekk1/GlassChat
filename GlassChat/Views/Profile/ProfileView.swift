@@ -25,7 +25,6 @@ struct ProfileView: View {
                         VStack(spacing: 20) {
                             actions
                             infoCard(for: user)
-                            verifiedSubtitle(for: user)
                             mediaSection
                         }
                         .padding()
@@ -53,21 +52,16 @@ struct ProfileView: View {
 
     // MARK: - Header
 
+    /// Clean centered avatar on the solid background — no banner or glow.
     private func header(for user: User) -> some View {
         VStack(spacing: 10) {
-            ZStack(alignment: .bottom) {
-                StretchyProfileBanner(user: user)
-
-                avatar(for: user)
-                    .offset(y: 54)
-                    .onTapGesture {
-                        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                            photoExpanded = true
-                        }
+            avatar(for: user)
+                .onTapGesture {
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                        photoExpanded = true
                     }
-                    .accessibilityLabel("Expand profile photo")
-            }
-            .padding(.bottom, 54)
+                }
+                .accessibilityLabel("Expand profile photo")
 
             HStack(spacing: 6) {
                 Text(user.name)
@@ -89,6 +83,7 @@ struct ProfileView: View {
             }
         }
         .frame(maxWidth: .infinity)
+        .padding(.top, 8)
     }
 
     /// The avatar participates in the hero zoom transition only while the
@@ -177,16 +172,6 @@ struct ProfileView: View {
         .padding(.vertical, 6)
     }
 
-    @ViewBuilder
-    private func verifiedSubtitle(for user: User) -> some View {
-        if user.isVerified {
-            Text("Verified by Verification")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity)
-        }
-    }
-
     private func infoCard(for user: User) -> some View {
         VStack(spacing: 0) {
             if !user.bio.isEmpty {
@@ -203,8 +188,22 @@ struct ProfileView: View {
                 title: user.registrationDateLabel,
                 subtitle: "Registration Date"
             )
+            if user.isVerified {
+                divider
+                verifiedCaption
+            }
         }
         .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+
+    /// Gray verification credit rendered as the final row of the card.
+    private var verifiedCaption: some View {
+        Text("Verified by Verification")
+            .font(.caption2)
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
     }
 
     private var divider: some View {

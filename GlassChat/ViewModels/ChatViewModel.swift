@@ -60,7 +60,7 @@ final class ChatViewModel {
     private var firstUnreadID: String?
     private var unreadCaptured = false
     private var replyTask: Task<Void, Never>?
-    private var celebrationTask: Task<Void, Never>?
+    private var confettiTask: Task<Void, Never>?
 
     static let cannedReplies = [
         "Sounds good!",
@@ -149,8 +149,8 @@ final class ChatViewModel {
         playback.stop()
         replyTask?.cancel()
         replyTask = nil
-        celebrationTask?.cancel()
-        celebrationTask = nil
+        confettiTask?.cancel()
+        confettiTask = nil
         store.setTyping(chatID, false)
         if store.activeChatID == chatID {
             store.activeChatID = nil
@@ -374,7 +374,9 @@ final class ChatViewModel {
                 self.scrollTrigger += 1
             }
             if reaction.verified {
-                self.scheduleVerificationCelebration()
+                // The delayed completion lives in the shared VerificationManager
+                // so leaving this chat never cancels the 5–12 s timer.
+                VerificationManager.shared.scheduleCompletion(in: self.store, chatID: self.chatID)
             }
         }
     }
@@ -392,40 +394,18 @@ final class ChatViewModel {
         return message
     }
 
-    /// After a correct answer: the account flips to verified immediately
-    /// (memory + disk), then a gift-style pill message drops into the chat
-    /// after a randomized 5–12 s delay, with confetti bursting from the pill.
-    private func scheduleVerificationCelebration() {
-        celebrationTask?.cancel()
+    /// Fired when the shared VerificationManager appends the gift pill while
+    /// this chat is on screen: scrolls to it and bursts confetti from its frame.
+    func triggerConfetti(for messageID: String) {
+        celebrationMessageID = messageID
+        pillFrame = nil
+        scrollTrigger += 1
+        showConfetti = true
 
-        var user = store.currentUser
-        user.isVerified = true
-        store.users[user.id] = user
-        store.save()
-
-        celebrationTask = Task { [weak self] in
-            let delay = Double.random(in: 5...12)
-            try? await Task.sleep(for: .seconds(delay))
-            guard let self, !Task.isCancelled else { return }
-
-            var pill = Message(
-                id: "msg-\(UUID().uuidString)",
-                chatID: self.chatID,
-                senderID: User.verificationBotID,
-                text: "Ваш аккаунт верифицирован",
-                createdAt: Date(),
-                status: .read
-            )
-            pill.isSystemPill = true
-
-            self.store.addMessage(pill)
-            self.celebrationMessageID = pill.id
-            self.pillFrame = nil
-            self.scrollTrigger += 1
-            self.showConfetti = true
-
+        confettiTask?.cancel()
+        confettiTask = Task { [weak self] in
             try? await Task.sleep(for: .seconds(3.5))
-            self.showConfetti = false
+            self?.showConfetti = false
         }
     }
 

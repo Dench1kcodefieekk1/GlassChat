@@ -159,3 +159,38 @@ final class VerificationBotEngineTests: XCTestCase {
         return VerificationBotEngine.answerAction((correctIndex + 1) % 4)
     }
 }
+
+// MARK: - Delayed completion service
+
+@MainActor
+final class VerificationManagerTests: XCTestCase {
+    func testCompletionVerifiesUserAndAppendsGiftPill() async throws {
+        let snapshot = Snapshot(
+            currentUserID: "user-me",
+            users: [User(id: "user-me", name: "Me", username: "me", bio: "", phone: "")],
+            chats: [],
+            messages: [],
+            settings: AppSettings()
+        )
+        let store = DataStore(snapshot: snapshot)
+        store.ensureVerificationBot()
+        let botChat = try XCTUnwrap(store.chats.first { $0.memberIDs.contains(User.verificationBotID) })
+
+        let manager = VerificationManager(delay: { 0 })
+        XCTAssertFalse(store.currentUser.isVerified)
+
+        manager.scheduleCompletion(in: store, chatID: botChat.id)
+        // Delay is injected as 0; give the MainActor task time to run.
+        try await Task.sleep(for: .milliseconds(400))
+
+        XCTAssertTrue(store.currentUser.isVerified, "user must flip to verified globally")
+        XCTAssertTrue(
+            store.sortedMessages(for: botChat.id).contains {
+                $0.isSystemPill && $0.text == "Ваш аккаунт верифицирован"
+            },
+            "gift pill must be appended to the chat history"
+        )
+        XCTAssertEqual(manager.celebrationChatID, botChat.id)
+        XCTAssertNotNil(manager.pendingPillID)
+    }
+}
