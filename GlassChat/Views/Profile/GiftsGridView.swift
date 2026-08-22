@@ -1,7 +1,8 @@
 import SwiftUI
 
 /// 3-column Telegram-style grid of owned gifts and NFT collectibles.
-/// Cells render bundled Lottie vector animations via `GiftAnimationView`.
+/// Every asset is hard-clipped to its 80x80 container and every card to its
+/// 120pt bounds — nothing can overflow the grid or overlap the tab bar above.
 struct GiftsGridView: View {
     let gifts: [GiftItem]
     let onTap: (GiftItem) -> Void
@@ -38,9 +39,13 @@ private struct GiftCell: View {
 
     var body: some View {
         VStack(spacing: 8) {
-            GiftAnimationView(filename: kind.lottieFilename)
-                .frame(height: 64)
-                .frame(maxWidth: .infinity)
+            // Strict square asset container — the Lottie composition renders
+            // inside these bounds only.
+            ZStack {
+                GiftAnimationView(filename: kind.lottieFilename)
+            }
+            .frame(width: 80, height: 80)
+            .clipped()
 
             Spacer(minLength: 0)
 
@@ -58,13 +63,15 @@ private struct GiftCell: View {
                 )
         }
         .padding(10)
-        .frame(height: 118)
         .frame(maxWidth: .infinity)
+        .frame(height: 120)
         .background(cardGradient, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .strokeBorder(.white.opacity(0.15), lineWidth: 1)
         )
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .clipped()
         .accessibilityLabel("\(kind.title) \(kind.rarity.tag)")
     }
 

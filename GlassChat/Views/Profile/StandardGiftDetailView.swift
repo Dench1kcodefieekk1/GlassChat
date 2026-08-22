@@ -79,9 +79,12 @@ struct StandardGiftDetailView: View {
     private var floatingGraphic: some View {
         TimelineView(.animation) { context in
             let t = context.date.timeIntervalSinceReferenceDate
-            GiftAnimationView(filename: kind.lottieFilename)
-                .frame(width: 130, height: 130)
-                .offset(y: reduceMotion ? 0 : 6 * sin(t * 1.6))
+            ZStack {
+                GiftAnimationView(filename: kind.lottieFilename)
+            }
+            .frame(width: 130, height: 130)
+            .clipped()
+            .offset(y: reduceMotion ? 0 : 6 * sin(t * 1.6))
         }
     }
 
