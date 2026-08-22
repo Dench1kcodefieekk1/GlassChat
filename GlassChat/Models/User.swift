@@ -12,7 +12,6 @@ struct User: Identifiable, Codable, Hashable {
 
     // Profile V2 (all optional so previously persisted snapshots keep decoding)
     var avatarFileName: String? = nil
-    var birthday: String? = nil
     var registeredAt: Date? = nil
     var personalAccent: AccentChoice? = nil
     var linkedChannel: String? = nil

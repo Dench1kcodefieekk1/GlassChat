@@ -7,6 +7,7 @@ struct SettingsHomeView: View {
     @State private var model = SettingsViewModel()
     @State private var showAddAccount = false
     @State private var avatarPickerItem: PhotosPickerItem?
+    @AppStorage("userPhone") private var userPhone = "+380 99 123 4567"
 
     private var me: User { store.currentUser }
 
@@ -65,7 +66,7 @@ struct SettingsHomeView: View {
                         Text("@\(me.username)")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
-                        Text(me.phone)
+                        Text(userPhone)
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -117,7 +118,7 @@ struct SettingsHomeView: View {
                 switchAccount(to: User.currentID)
             } label: {
                 accountRow(name: store.user(id: User.currentID)?.name ?? "Alex",
-                           phone: store.user(id: User.currentID)?.phone ?? "",
+                           phone: userPhone,
                            isSelected: store.currentUserID == User.currentID)
             }
             ForEach(store.settings.linkedAccounts) { account in

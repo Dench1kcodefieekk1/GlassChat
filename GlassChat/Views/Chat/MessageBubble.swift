@@ -249,6 +249,16 @@ struct MessageRow: View {
             Button("Forward", systemImage: "arrowshape.turn.up.right") {
                 model.forwardMessage = message
             }
+            if !isOwn, let audio = message.attachments.first(where: \.isMusicAttachment) {
+                Button {
+                    AudioMessageActions.saveToProfileMusic(
+                        attachment: audio,
+                        senderName: store.displayName(of: message)
+                    )
+                } label: {
+                    Label("Save to Profile Music", systemImage: "music.note.list")
+                }
+            }
             if isOwn, message.attachments.allSatisfy({ $0.kind != .image }) {
                 Button("Edit", systemImage: "pencil") {
                     model.editingMessage = message

@@ -8,8 +8,7 @@ enum DemoSeeder {
         // MARK: Users
 
         var me = User(id: "user-me", name: "Alex", username: "alex",
-                      bio: "Building delightful iOS things.", phone: "+1 555 0100")
-        me.birthday = "12 October"
+                      bio: "Building delightful iOS things.", phone: "+380 99 123 4567")
         me.registeredAt = Calendar.current.date(from: DateComponents(year: 2023, month: 10, day: 5))
         let sarah = User(id: "user-sarah", name: "Sarah Chen", username: "sarahc",
                          bio: "Product designer. Glass enthusiast.", phone: "+1 555 0101",

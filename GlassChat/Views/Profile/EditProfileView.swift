@@ -9,7 +9,7 @@ struct EditProfileView: View {
     @State private var lastName: String
     @State private var bio: String
     @State private var username: String
-    @State private var phone: String
+    @AppStorage("userPhone") private var phone = "+380 99 123 4567"
     @State private var personalAccent: AccentChoice
     @State private var linkedChannel: String
     @State private var pendingAvatar: UIImage?
@@ -23,7 +23,6 @@ struct EditProfileView: View {
         _lastName = State(initialValue: "")
         _bio = State(initialValue: "")
         _username = State(initialValue: "")
-        _phone = State(initialValue: "")
         _personalAccent = State(initialValue: .blue)
         _linkedChannel = State(initialValue: "")
     }
@@ -79,26 +78,28 @@ struct EditProfileView: View {
 
     private var avatarSection: some View {
         Section {
-            VStack(spacing: 10) {
-                Group {
-                    if let pendingAvatar {
-                        Image(uiImage: pendingAvatar)
-                            .resizable()
-                            .scaledToFill()
-                    } else {
-                        AvatarView(title: displayNamePreview, seed: userID, size: 92, fileName: me.avatarFileName)
+            PhotosPicker(selection: $pickerItem, matching: .images) {
+                ZStack(alignment: .bottomTrailing) {
+                    Group {
+                        if let pendingAvatar {
+                            Image(uiImage: pendingAvatar)
+                                .resizable()
+                                .scaledToFill()
+                        } else {
+                            AvatarView(title: displayNamePreview, seed: userID, size: 92, fileName: me.avatarFileName)
+                        }
                     }
-                }
-                .frame(width: 92, height: 92)
-                .clipShape(Circle())
+                    .frame(width: 92, height: 92)
+                    .clipShape(Circle())
 
-                PhotosPicker(selection: $pickerItem, matching: .images) {
-                    Text("Change Photo")
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(.tint)
+                    Image(systemName: "camera.fill")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 26, height: 26)
+                        .background(Circle().fill(.tint))
                 }
-                .accessibilityLabel("Change profile photo")
             }
+            .accessibilityLabel("Change profile photo")
             .frame(maxWidth: .infinity)
             .listRowBackground(Color.clear)
         }
@@ -201,7 +202,6 @@ struct EditProfileView: View {
         lastName = parts.count > 1 ? parts[1] : ""
         bio = me.bio
         username = me.username
-        phone = me.phone
         personalAccent = me.personalAccent ?? store.settings.accent
         linkedChannel = me.linkedChannel ?? ""
     }

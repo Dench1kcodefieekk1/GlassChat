@@ -4,6 +4,7 @@ import UIKit
 struct UserProfileView: View {
     @Environment(DataStore.self) private var store
     @Environment(AppState.self) private var appState
+    @AppStorage("userPhone") private var userPhone = "+380 99 123 4567"
     @State private var showCompose = false
     @State private var showCall = false
     @State private var toast: String?
@@ -19,6 +20,7 @@ struct UserProfileView: View {
                 actions
                 infoCard
                 mediaSection
+                ProfileMusicSection()
             }
             .padding()
         }
@@ -130,29 +132,23 @@ struct UserProfileView: View {
 
     private var infoCard: some View {
         VStack(spacing: 0) {
-            infoRow(icon: "phone.fill", color: .green, title: me.phone, subtitle: "Phone", copyable: true)
+            infoRow(icon: "phone.fill", color: .green, title: userPhone, subtitle: "Phone", copyable: true)
             divider
             infoRow(icon: "at", color: .orange, title: "@\(me.username)", subtitle: "Username", copyable: true)
             if !me.bio.isEmpty {
                 divider
                 infoRow(icon: "info.circle.fill", color: .blue, title: me.bio, subtitle: "Bio", copyable: false)
             }
-            if let birthday = me.birthday {
-                divider
-                infoRow(icon: "gift.fill", color: .pink, title: birthday, subtitle: "Birthday", copyable: false)
-            }
+            divider
+            infoRow(
+                icon: "calendar",
+                color: .purple,
+                title: me.registeredAt.map { $0.formatted(.dateTime.month(.wide).year()) } ?? "October 2023",
+                subtitle: "Registration Date",
+                copyable: false
+            )
             divider
             infoRow(icon: "number", color: .gray, title: me.id, subtitle: "User ID", copyable: true)
-            if let registeredAt = me.registeredAt {
-                divider
-                infoRow(
-                    icon: "calendar",
-                    color: .indigo,
-                    title: registeredAt.formatted(.dateTime.month(.wide).year()),
-                    subtitle: "Registration Date",
-                    copyable: false
-                )
-            }
             if let channel = me.linkedChannel {
                 divider
                 infoRow(icon: "megaphone.fill", color: .purple, title: channel, subtitle: "Linked Channel", copyable: false)
