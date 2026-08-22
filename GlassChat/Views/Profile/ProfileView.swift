@@ -117,13 +117,15 @@ struct ProfileView: View {
                 .onTapGesture { collapsePhoto() }
 
             VStack(spacing: 18) {
-                if let avatarFile = user.avatarFileName {
-                    StoredImageView(fileName: avatarFile)
-                        .frame(width: 300, height: 300)
-                        .clipShape(Circle())
-                        .overlay(Circle().stroke(.white.opacity(0.2), lineWidth: 1))
-                } else {
-                    AvatarView(title: user.name, seed: user.id, size: 260, fileName: user.avatarFileName)
+                Group {
+                    if let avatarFile = user.avatarFileName {
+                        StoredImageView(fileName: avatarFile)
+                            .frame(width: 300, height: 300)
+                            .clipShape(Circle())
+                            .overlay(Circle().stroke(.white.opacity(0.2), lineWidth: 1))
+                    } else {
+                        AvatarView(title: user.name, seed: user.id, size: 260, fileName: user.avatarFileName)
+                    }
                 }
                 .matchedGeometryEffect(id: "profile-avatar", in: avatarNamespace)
 

@@ -180,13 +180,15 @@ struct UserProfileView: View {
                 .ignoresSafeArea()
 
             VStack(spacing: 18) {
-                if let avatarFile = me.avatarFileName {
-                    StoredImageView(fileName: avatarFile)
-                        .frame(width: 300, height: 300)
-                        .clipShape(Circle())
-                        .overlay(Circle().stroke(.white.opacity(0.2), lineWidth: 1))
-                } else {
-                    AvatarView(title: me.name, seed: me.id, size: 260, fileName: me.avatarFileName)
+                Group {
+                    if let avatarFile = me.avatarFileName {
+                        StoredImageView(fileName: avatarFile)
+                            .frame(width: 300, height: 300)
+                            .clipShape(Circle())
+                            .overlay(Circle().stroke(.white.opacity(0.2), lineWidth: 1))
+                    } else {
+                        AvatarView(title: me.name, seed: me.id, size: 260, fileName: me.avatarFileName)
+                    }
                 }
                 .matchedGeometryEffect(id: "my-avatar", in: avatarNamespace)
 
