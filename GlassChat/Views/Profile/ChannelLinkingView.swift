@@ -45,7 +45,7 @@ struct ChannelLinkingView: View {
                 .font(.system(size: 14, weight: .medium))
                 .foregroundStyle(.white)
                 .frame(width: 34, height: 34)
-                .background(.tint.gradient, in: Circle())
+                .background(Color.accentColor.gradient, in: Circle())
             VStack(alignment: .leading, spacing: 1) {
                 Text(name)
                     .font(.subheadline.weight(.medium))
