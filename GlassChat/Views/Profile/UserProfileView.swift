@@ -10,6 +10,7 @@ struct UserProfileView: View {
     @State private var mediaTab: ProfileMediaTab = .media
     @State private var viewerItem: ViewerItem?
     @State private var photoExpanded = false
+    @State private var showRating = false
     @Namespace private var avatarNamespace
 
     private var me: User { store.currentUser }
@@ -55,6 +56,9 @@ struct UserProfileView: View {
             .fullScreenCover(item: $viewerItem) { item in
                 ImageViewerView(fileName: item.fileName)
             }
+            .sheet(isPresented: $showRating) {
+                UserRatingSheetView()
+            }
             .overlay(alignment: .bottom) {
                 if let toast {
                     Text(toast)
@@ -97,6 +101,7 @@ struct UserProfileView: View {
                         .foregroundStyle(.tint)
                         .accessibilityLabel("Verified")
                 }
+                levelBadge
             }
             Text("online")
                 .font(.subheadline)
@@ -107,6 +112,37 @@ struct UserProfileView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 8)
+    }
+
+    /// Sleek blue level pill: active SF Symbol shape + level number.
+    /// Tapping opens the rating modal.
+    private var levelBadge: some View {
+        let levels = UserLevelManager.shared
+        return Button {
+            Haptics.light()
+            showRating = true
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: levels.levelSymbolName)
+                    .font(.system(size: 9, weight: .bold))
+                Text("\(levels.currentLevel)")
+                    .font(.system(size: 12, weight: .bold))
+                    .monospacedDigit()
+            }
+            .foregroundStyle(.white)
+            .padding(.horizontal, 9)
+            .padding(.vertical, 4)
+            .background(
+                LinearGradient(
+                    colors: [Color(red: 0.24, green: 0.48, blue: 1.0), Color(red: 0.3, green: 0.4, blue: 0.95)],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                ),
+                in: Capsule()
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Level \(levels.currentLevel), open rating")
     }
 
     /// The avatar carries the matched geometry id only while collapsed.

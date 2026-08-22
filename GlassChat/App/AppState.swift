@@ -31,5 +31,7 @@ struct AppDependencies {
         self.store = store
         NotificationService.shared.configure()
         PresenceSimulator.start(store: store)
+        // +500 XP on the first launch of the day.
+        UserLevelManager.shared.registerDailyLoginBonus()
     }
 }

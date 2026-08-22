@@ -182,6 +182,7 @@ final class ChatViewModel {
         }
         let text = draft.trimmed
         guard !text.isEmpty else { return }
+        UserLevelManager.shared.addXPForMessage(text: text)
         var message = Message(
             id: "msg-\(UUID().uuidString)",
             chatID: chatID,
