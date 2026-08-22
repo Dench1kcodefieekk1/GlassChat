@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 /// Glassmorphism container: blur backdrop + translucent gradient fill +
 /// subtle rounded stroke — the GlassChat signature card.
