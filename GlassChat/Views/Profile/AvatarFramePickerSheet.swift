@@ -82,7 +82,7 @@ struct AvatarFramePickerSheet: View {
                         Image(systemName: "checkmark.circle.fill")
                             .font(.body)
                             .foregroundStyle(.tint)
-                            .background(Circle().fill(.white), in: Circle())
+                            .background(.white, in: Circle())
                     } else if !unlocked {
                         Image(systemName: "lock.fill")
                             .font(.caption2)

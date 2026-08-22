@@ -76,7 +76,7 @@ final class LevelUpAudioNotifier {
                 let t = Double(offset) / sampleRate
                 let envelope = exp(-t * 9) * min(1, t * 220)
                 let value = sin(2 * .pi * frequency * t) * 0.5 * envelope
-                samples[index] = Int16(max(-1, min(1, value)) * Int16.max)
+                samples[index] = Int16(max(-1.0, min(1.0, value)) * Double(Int16.max))
             }
         }
 
