@@ -81,12 +81,12 @@ final class UserLevelManager {
     func addXP(_ amount: Int) {
         guard amount > 0 else { return }
         currentXP += amount
-        while currentLevel < Self.maxLevel && currentXP >= Self.requiredXP {
-            currentXP -= Self.requiredXP
+        while currentLevel < Self.maxLevel && currentXP >= requiredXP {
+            currentXP -= requiredXP
             currentLevel += 1
         }
         if currentLevel >= Self.maxLevel {
-            currentXP = min(currentXP, Self.requiredXP)
+            currentXP = min(currentXP, requiredXP)
         }
         persist()
     }
