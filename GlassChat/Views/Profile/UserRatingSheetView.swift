@@ -1,10 +1,11 @@
 import SwiftUI
 
-/// Telegram-style rating modal: XP status bubble, dual-ended level progress,
-/// activity rules breakdown, and the OK action.
+/// Telegram/Discord-style rating modal: XP status bubble, level progress,
+/// earning rules, and the nickname style picker with unlock badges.
 struct UserRatingSheetView: View {
     @Environment(\.dismiss) private var dismiss
     private let manager = UserLevelManager.shared
+    private let styles = NicknameStyleManager.shared
 
     private var nextLevelLabel: String {
         manager.currentLevel >= UserLevelManager.maxLevel
@@ -21,6 +22,7 @@ struct UserRatingSheetView: View {
                     xpBubble
                     progressSection
                     rulesCard
+                    stylePicker
                 }
                 .padding(.horizontal, 18)
                 .padding(.top, 6)
@@ -142,22 +144,13 @@ struct UserRatingSheetView: View {
             ruleRow(
                 icon: "bubble.left.and.bubble.right.fill",
                 tint: .blue,
-                prefix: "плюс",
-                text: " 10 XP за сообщение + 1 XP за каждый символ в тексте."
+                text: "10 XP за сообщение + 1 XP за символ"
             )
             divider
             ruleRow(
                 icon: "calendar.badge.clock",
                 tint: .blue,
-                prefix: "плюс",
-                text: " 500 XP каждый день при заходе в мессенджер."
-            )
-            divider
-            ruleRow(
-                icon: "clock.arrow.circlepath",
-                tint: .orange,
-                prefix: "нейтрально",
-                text: " Рейтинг отражает вашу реальную активность и общение в сети."
+                text: "500 XP каждый день при заходе"
             )
         }
         .background(
@@ -166,7 +159,7 @@ struct UserRatingSheetView: View {
         )
     }
 
-    private func ruleRow(icon: String, tint: Color, prefix: String, text: String) -> some View {
+    private func ruleRow(icon: String, tint: Color, text: String) -> some View {
         HStack(alignment: .top, spacing: 12) {
             Image(systemName: icon)
                 .font(.system(size: 15, weight: .medium))
@@ -174,7 +167,7 @@ struct UserRatingSheetView: View {
                 .frame(width: 30, height: 30)
                 .background(tint, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
 
-            (Text(prefix).bold() + Text(text))
+            (Text("плюс").bold() + Text(" \(text)"))
                 .font(.subheadline)
                 .foregroundStyle(.primary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -185,7 +178,72 @@ struct UserRatingSheetView: View {
         .padding(.vertical, 12)
     }
 
+    // MARK: - Nickname styles
+
+    private var stylePicker: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Стили ника")
+                .font(.headline)
+                .padding(.horizontal, 4)
+
+            VStack(spacing: 0) {
+                ForEach(Array(NicknameStyleInfo.all.enumerated()), id: \.element.id) { index, info in
+                    styleRow(info)
+                    if index < NicknameStyleInfo.all.count - 1 {
+                        divider
+                    }
+                }
+            }
+            .background(
+                Color(uiColor: .secondarySystemGroupedBackground),
+                in: RoundedRectangle(cornerRadius: 16, style: .continuous)
+            )
+        }
+    }
+
+    @ViewBuilder
+    private func styleRow(_ info: NicknameStyleInfo) -> some View {
+        let unlocked = styles.isUnlocked(info.id, level: manager.currentLevel)
+        let isActive = unlocked && styles.activeID == info.id
+
+        Button {
+            guard unlocked else { return }
+            Haptics.light()
+            styles.select(info.id)
+        } label: {
+            HStack(spacing: 12) {
+                NicknameStyleSwatch(style: info.id)
+
+                Text(info.title)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.primary)
+
+                Spacer()
+
+                if isActive {
+                    Label("Активен", systemImage: "checkmark.circle.fill")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.tint)
+                } else if unlocked {
+                    Text("Выбрать")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.tint)
+                } else {
+                    Label("Открывается на \(info.requiredLevel) уровне", systemImage: "lock.fill")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 11)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(info.title)
+        .accessibilityHint(unlocked ? "Выбрать стиль ника" : "Заблокировано до уровня \(info.requiredLevel)")
+    }
+
     private var divider: some View {
-        Divider().padding(.leading, 56)
+        Divider().padding(.leading, 52)
     }
 }

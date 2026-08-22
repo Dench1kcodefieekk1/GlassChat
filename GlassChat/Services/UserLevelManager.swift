@@ -60,7 +60,8 @@ final class UserLevelManager {
 
     // MARK: - Shape logic (SF Symbols only)
 
-    /// Badge shape for a level: cycles every 20 levels, crown at 500.
+    /// Badge shape for a level: cycles every 20 levels, star from 100,
+    /// crown at 500.
     static func symbolName(for level: Int) -> String {
         switch level {
         case ..<20: return "circle.fill"        // 1–19
@@ -68,7 +69,7 @@ final class UserLevelManager {
         case 40..<60: return "square.fill"      // 40–59
         case 60..<80: return "pentagon.fill"    // 60–79
         case 80..<100: return "hexagon.fill"    // 80–99
-        case 100..<500: return "seal.fill"      // 100–499
+        case 100..<500: return "star.fill"      // 100–499
         default: return "crown.fill"            // 500
         }
     }

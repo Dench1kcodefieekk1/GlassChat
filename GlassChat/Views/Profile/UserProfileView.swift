@@ -93,15 +93,14 @@ struct UserProfileView: View {
                 .accessibilityLabel("Expand profile photo")
 
             HStack(spacing: 6) {
-                Text(me.name)
-                    .font(.title2.weight(.semibold))
+                levelBadge
+                NicknameText(name: me.name, style: NicknameStyleManager.shared.activeID)
                 if me.isVerified {
                     Image(systemName: "checkmark.seal.fill")
                         .font(.title3)
                         .foregroundStyle(.tint)
                         .accessibilityLabel("Verified")
                 }
-                levelBadge
             }
             Text("online")
                 .font(.subheadline)

@@ -16,8 +16,8 @@ final class UserLevelManagerTests: XCTestCase {
         XCTAssertEqual(UserLevelManager.symbolName(for: 79), "pentagon.fill")
         XCTAssertEqual(UserLevelManager.symbolName(for: 80), "hexagon.fill")
         XCTAssertEqual(UserLevelManager.symbolName(for: 99), "hexagon.fill")
-        XCTAssertEqual(UserLevelManager.symbolName(for: 100), "seal.fill")
-        XCTAssertEqual(UserLevelManager.symbolName(for: 499), "seal.fill")
+        XCTAssertEqual(UserLevelManager.symbolName(for: 100), "star.fill")
+        XCTAssertEqual(UserLevelManager.symbolName(for: 499), "star.fill")
         XCTAssertEqual(UserLevelManager.symbolName(for: 500), "crown.fill")
     }
 
