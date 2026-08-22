@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: flutter_app
+        working-directory: android_flutter_app
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -82,7 +82,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: GlassChat-Android-APKs
-          path: flutter_app/build/app/outputs/flutter-apk/*.apk
+          path: android_flutter_app/build/app/outputs/flutter-apk/*.apk
           if-no-files-found: error
 
       - name: Upload logs

@@ -16,7 +16,7 @@ def flutterVersionCode = localProperties.getProperty("flutter.versionCode") ?: "
 def flutterVersionName = localProperties.getProperty("flutter.versionName") ?: "0.1.0"
 
 android {
-    namespace "com.glasschat.flutter"
+    namespace "com.glasschat.android"
     compileSdk 34
 
     compileOptions {
@@ -29,7 +29,7 @@ android {
     }
 
     defaultConfig {
-        applicationId "com.glasschat.flutter"
+        applicationId "com.glasschat.android"
         minSdk 21
         targetSdk 34
         versionCode flutterVersionCode.toInteger()
@@ -38,7 +38,6 @@ android {
 
     buildTypes {
         release {
-            // Unsigned debug-signing keeps CI artifact installable for testing.
             signingConfig signingConfigs.debug
         }
     }
