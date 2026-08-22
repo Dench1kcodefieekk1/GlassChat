@@ -59,9 +59,20 @@ enum GiftKind: String, CaseIterable, Identifiable {
     /// Estimated market value (NFT collectibles only).
     var marketValueLabel: String? {
         switch self {
-        case .rainbowNyanCat: return "~$1,850.00"
+        case .rainbowNyanCat: return "~$1,850.00 · ~74,000 ₴"
         case .viceCream: return "~$1,450.00 · ~58,000 ₴"
         default: return nil
+        }
+    }
+
+    /// Bundled Lottie animation resource (Resources/Lottie/<name>.json).
+    var lottieFilename: String {
+        switch self {
+        case .diamondRing: return "gift_diamond_ring"
+        case .cyberCat: return "gift_cyber_cat"
+        case .goldStar: return "gift_gold_star"
+        case .rainbowNyanCat: return "gift_rainbow_cat"
+        case .viceCream: return "gift_vice_cream"
         }
     }
 

@@ -12,6 +12,10 @@ settings:
     TARGETED_DEVICE_FAMILY: "1,2"
     ENABLE_USER_SCRIPT_SANDBOXING: "YES"
     SWIFT_STRICT_CONCURRENCY: minimal
+packages:
+  Lottie:
+    url: https://github.com/airbnb/lottie-ios
+    from: 4.4.0
 targets:
   GlassChat:
     type: application
@@ -21,9 +25,12 @@ targets:
       # Folder-based source: XcodeGen automatically includes every Swift file
       # under GlassChat/ — including Services/AudioPlayerManager.swift (MusicManager),
       # Views/Profile/ProfileMusicSection.swift, Views/Chat/AudioMessageBubble.swift
-      # and Views/Chat/DocumentPicker.swift.
+      # and Views/Chat/DocumentPicker.swift. JSON files under Resources/Lottie/
+      # are bundled as resources by XcodeGen.
       # Covers all Views/, Models/, Services/, Repositories/, ViewModels/, App/, Theme/.
       - path: GlassChat
+    dependencies:
+      - package: Lottie
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.glasschat.app

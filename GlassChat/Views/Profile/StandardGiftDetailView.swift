@@ -75,12 +75,12 @@ struct StandardGiftDetailView: View {
 
     // MARK: - Parts
 
-    /// Animated graphic with a subtle continuous floating motion.
+    /// Lottie animation with a subtle continuous floating motion.
     private var floatingGraphic: some View {
         TimelineView(.animation) { context in
             let t = context.date.timeIntervalSinceReferenceDate
-            GiftGraphicView(kind: kind)
-                .frame(width: 120, height: 120)
+            GiftAnimationView(filename: kind.lottieFilename)
+                .frame(width: 130, height: 130)
                 .offset(y: reduceMotion ? 0 : 6 * sin(t * 1.6))
         }
     }

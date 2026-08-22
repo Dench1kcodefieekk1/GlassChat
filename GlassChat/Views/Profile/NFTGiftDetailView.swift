@@ -77,9 +77,9 @@ struct NFTGiftDetailView: View {
             )
             .frame(height: 210)
             .overlay(alignment: .bottom) {
-                GiftGraphicView(kind: kind)
-                    .frame(width: 130, height: 130)
-                    .offset(y: 42)
+                GiftAnimationView(filename: kind.lottieFilename)
+                    .frame(width: 140, height: 140)
+                    .offset(y: 44)
             }
             .frame(maxWidth: .infinity)
 
