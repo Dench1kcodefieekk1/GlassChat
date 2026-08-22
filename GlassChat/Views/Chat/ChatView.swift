@@ -77,6 +77,20 @@ struct ChatView: View {
             .fullScreenCover(item: $model.viewerItem) { item in
                 ImageViewerView(fileName: item.fileName)
             }
+            .overlay(alignment: .top) {
+                if model.showsVerifiedPill {
+                    verifiedPill
+                        .padding(.top, 64)
+                        .transition(.scale(scale: 0.8).combined(with: .opacity))
+                }
+            }
+            .animation(.spring(response: 0.35, dampingFraction: 0.75), value: model.showsVerifiedPill)
+            .overlay {
+                if model.showConfetti {
+                    ConfettiView()
+                }
+            }
+            .animation(.easeInOut(duration: 0.3), value: model.showConfetti)
             .alert("Microphone access needed", isPresented: $model.recordingDenied) {
                 Button("OK", role: .cancel) {}
             } message: {
@@ -197,6 +211,23 @@ struct ChatView: View {
                 .contentShape(Circle())
         }
         .accessibilityLabel("Chat options")
+    }
+
+    // MARK: - Verification banner
+
+    private var verifiedPill: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "checkmark.seal.fill")
+                .font(.footnote)
+            Text("Ваш аккаунт верифицирован")
+                .font(.footnote.weight(.semibold))
+        }
+        .foregroundStyle(.white)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 9)
+        .background(.green.gradient, in: Capsule())
+        .shadow(color: .green.opacity(0.4), radius: 8, y: 3)
+        .accessibilityLabel("Account verified")
     }
 
     // MARK: - Message list

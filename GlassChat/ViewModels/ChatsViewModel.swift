@@ -42,9 +42,13 @@ final class ChatsViewModel {
         }
     }
 
-    func startChat(with userID: String, in store: DataStore) {
+    /// Creates (or finds) the direct chat and dismisses the compose sheet.
+    /// Navigation is triggered by the caller through `AppState.pendingOpenChatID`
+    /// so the push happens after the sheet has fully dismissed.
+    @discardableResult
+    func startChat(with userID: String, in store: DataStore) -> String {
         let chat = store.createDirectChat(with: userID)
         showCompose = false
-        popToChat(chat.id)
+        return chat.id
     }
 }

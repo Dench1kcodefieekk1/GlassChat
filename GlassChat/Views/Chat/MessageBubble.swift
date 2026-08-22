@@ -60,6 +60,7 @@ struct MessageRow: View {
                     .foregroundStyle(.secondary)
             } else {
                 content
+                inlineButtonsGrid
             }
 
             metaRow
@@ -192,6 +193,42 @@ struct MessageRow: View {
         .fill(isOwn
               ? AnyShapeStyle(.tint)
               : AnyShapeStyle(Color(uiColor: .secondarySystemGroupedBackground)))
+    }
+
+    // MARK: - Bot inline keyboard
+
+    @ViewBuilder
+    private var inlineButtonsGrid: some View {
+        if let buttons = message.inlineButtons, !buttons.isEmpty {
+            LazyVGrid(
+                columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 2),
+                spacing: 6
+            ) {
+                ForEach(buttons) { button in
+                    Button {
+                        model.tapInlineButton(button, on: message)
+                    } label: {
+                        Text(button.title)
+                            .font(.footnote.weight(.medium))
+                            .foregroundStyle(isOwn ? AnyShapeStyle(.white) : AnyShapeStyle(.tint))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 8)
+                            .padding(.horizontal, 6)
+                            .background(
+                                isOwn
+                                    ? AnyShapeStyle(.white.opacity(0.16))
+                                    : AnyShapeStyle(Color(uiColor: .tertiarySystemFill)),
+                                in: Capsule()
+                            )
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(button.title)
+                }
+            }
+            .padding(.top, 2)
+        }
     }
 
     // MARK: - Reactions

@@ -40,3 +40,11 @@ targets:
         INFOPLIST_KEY_NSCameraUsageDescription: "GlassChat uses the camera to take photos you send in chats."
         INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription: "GlassChat saves photos you choose to keep to your photo library."
         CODE_SIGN_STYLE: Automatic
+  GlassChatTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "26.0"
+    sources:
+      - path: GlassChatTests
+    dependencies:
+      - target: GlassChat

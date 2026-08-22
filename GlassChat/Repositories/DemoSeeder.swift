@@ -7,9 +7,10 @@ enum DemoSeeder {
 
         // MARK: Users
 
-        var me = User(id: "user-me", name: "Alex", username: "alex",
+        // registeredAt intentionally left to its dynamic default (Date()),
+        // so the profile reflects the actual (recent) account creation moment.
+        let me = User(id: "user-me", name: "Alex", username: "alex",
                       bio: "Building delightful iOS things.", phone: "+380 99 123 4567")
-        me.registeredAt = Calendar.current.date(from: DateComponents(year: 2023, month: 10, day: 5)) ?? Date()
         let sarah = User(id: "user-sarah", name: "Sarah Chen", username: "sarahc",
                          bio: "Product designer. Glass enthusiast.", phone: "+1 555 0101",
                          isVerified: true, isOnline: true)

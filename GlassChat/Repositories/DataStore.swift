@@ -45,7 +45,7 @@ final class DataStore {
         return directory.appendingPathComponent("database.json")
     }
 
-    private init(snapshot: Snapshot) {
+    init(snapshot: Snapshot) {
         currentUserID = snapshot.currentUserID
         users = Dictionary(uniqueKeysWithValues: snapshot.users.map { ($0.id, $0) })
         chats = snapshot.chats
@@ -61,14 +61,65 @@ final class DataStore {
     }
 
     static func load() -> DataStore {
+        let store: DataStore
         if let data = try? Data(contentsOf: fileURL),
            let snapshot = try? JSONDecoder.iso8601.decode(Snapshot.self, from: data) {
-            return DataStore(snapshot: snapshot)
+            store = DataStore(snapshot: snapshot)
+        } else {
+            store = DataStore(snapshot: DemoSeeder.makeSnapshot())
+            store.save()
         }
-        let seeded = DemoSeeder.makeSnapshot()
-        let store = DataStore(snapshot: seeded)
-        store.save()
+        // Existing installs persisted before the bot existed still get it.
+        store.ensureVerificationBot()
         return store
+    }
+
+    /// Idempotently creates the system Verification bot, its chat, and the
+    /// intro message so both fresh and upgraded installs see the flow.
+    func ensureVerificationBot() {
+        let botChatID = "chat-verification"
+        var changed = false
+
+        if users[User.verificationBotID] == nil {
+            let bot = User(
+                id: User.verificationBotID,
+                name: "Verification",
+                username: "verification",
+                bio: "Official verification bot.",
+                phone: "",
+                isVerified: true
+            )
+            users[bot.id] = bot
+            changed = true
+        }
+
+        if !chats.contains(where: { $0.kind == .direct && $0.memberIDs.contains(User.verificationBotID) }) {
+            chats.append(Chat(
+                id: botChatID,
+                kind: .direct,
+                title: "Verification",
+                memberIDs: [currentUserID, User.verificationBotID]
+            ))
+            changed = true
+        }
+
+        if messages[botChatID, default: []].isEmpty {
+            messages[botChatID] = [
+                Message(
+                    id: "msg-bot-intro",
+                    chatID: botChatID,
+                    senderID: User.verificationBotID,
+                    text: "Добро пожаловать! Отправьте /start, чтобы пройти верификацию и получить галочку рядом с именем.",
+                    createdAt: Date(),
+                    status: .read
+                )
+            ]
+            changed = true
+        }
+
+        if changed {
+            save()
+        }
     }
 
     func save() {
@@ -169,6 +220,7 @@ final class DataStore {
         list.append(message)
         messages[message.chatID] = list
 
+        var targetTitle: String?
         if var chat = chat(id: message.chatID) {
             chat.lastMessageAt = message.createdAt
             chat.lastMessagePreview = MessagePreview.text(for: message, in: self)
@@ -178,8 +230,18 @@ final class DataStore {
                 chat.unreadCount += 1
             }
             updateChat(chat)
+            targetTitle = chat.title
         } else {
             save()
+        }
+
+        // Floating in-app banner for messages the user isn't reading right now.
+        if message.senderID != currentUserID, activeChatID != message.chatID {
+            InAppNotificationCenter.shared.show(
+                chatID: message.chatID,
+                title: targetTitle ?? users[message.senderID]?.name ?? "New message",
+                text: message.text.isEmpty ? "Attachment" : message.text
+            )
         }
     }
 

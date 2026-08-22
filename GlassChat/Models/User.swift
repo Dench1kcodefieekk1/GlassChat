@@ -16,6 +16,7 @@ struct User: Identifiable, Codable, Hashable {
     var registeredAt: Date = Date()
     var personalAccent: AccentChoice? = nil
     var linkedChannel: String? = nil
+    var bannerFileName: String? = nil
 
     var initials: String {
         name.split(separator: " ").prefix(2).compactMap { $0.first.map(String.init) }.joined()
@@ -27,6 +28,8 @@ struct User: Identifiable, Codable, Hashable {
     }
 
     static let currentID = "user-me"
+    /// System bot that owns the in-app verification flow.
+    static let verificationBotID = "user-verification"
 }
 
 // MARK: - Backward-compatible decoding
@@ -34,7 +37,7 @@ struct User: Identifiable, Codable, Hashable {
 extension User {
     private enum CodingKeys: String, CodingKey {
         case id, name, username, bio, phone, isVerified, isOnline, lastSeen
-        case avatarFileName, registeredAt, personalAccent, linkedChannel
+        case avatarFileName, registeredAt, personalAccent, linkedChannel, bannerFileName
     }
 
     init(from decoder: Decoder) throws {
@@ -53,5 +56,6 @@ extension User {
         registeredAt = try container.decodeIfPresent(Date.self, forKey: .registeredAt) ?? Date()
         personalAccent = try container.decodeIfPresent(AccentChoice.self, forKey: .personalAccent)
         linkedChannel = try container.decodeIfPresent(String.self, forKey: .linkedChannel)
+        bannerFileName = try container.decodeIfPresent(String.self, forKey: .bannerFileName)
     }
 }

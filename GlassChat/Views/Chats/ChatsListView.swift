@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ChatsListView: View {
     @Environment(DataStore.self) private var store
+    @Environment(AppState.self) private var appState
     @Bindable var model: ChatsViewModel
 
     private var chats: [Chat] { model.visibleChats(in: store) }
@@ -31,7 +32,7 @@ struct ChatsListView: View {
         }
         .sheet(isPresented: $model.showCompose) {
             ComposeView { userID in
-                model.startChat(with: userID, in: store)
+                appState.pendingOpenChatID = model.startChat(with: userID, in: store)
             }
         }
     }

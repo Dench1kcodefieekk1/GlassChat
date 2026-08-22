@@ -8,6 +8,13 @@ enum MessageStatus: String, Codable {
     case failed
 }
 
+/// Telegram-style inline keyboard button attached to bot messages.
+struct InlineButton: Identifiable, Codable, Hashable {
+    let id: String
+    let title: String
+    let action: String
+}
+
 struct Message: Identifiable, Codable, Hashable {
     var id: String
     var chatID: String
@@ -21,6 +28,7 @@ struct Message: Identifiable, Codable, Hashable {
     var replyToID: String? = nil
     var forwardedFrom: String? = nil
     var reactions: [String: [String]] = [:]
+    var inlineButtons: [InlineButton]? = nil
 }
 
 extension Message {

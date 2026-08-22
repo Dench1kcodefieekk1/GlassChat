@@ -16,6 +16,9 @@ enum AppRoute: Hashable {
 @Observable
 final class AppState {
     var selectedTab: AppTab = .chats
+    /// Chat the UI should navigate to (e.g. after the compose sheet dismisses
+    /// or an in-app notification is tapped). Consumed by the chats tab.
+    var pendingOpenChatID: String? = nil
 }
 
 @MainActor

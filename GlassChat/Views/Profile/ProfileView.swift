@@ -6,6 +6,8 @@ struct ProfileView: View {
     @State private var model: ProfileViewModel
     @State private var showCall = false
     @State private var viewerItem: ViewerItem?
+    @State private var photoExpanded = false
+    @Namespace private var avatarNamespace
 
     let onOpenChat: ((String) -> Void)?
 
@@ -15,36 +17,58 @@ struct ProfileView: View {
     }
 
     var body: some View {
-        ScrollView {
-            if let user = model.user {
-                VStack(spacing: 20) {
-                    header(for: user)
-                    actions
-                    infoCard(for: user)
-                    mediaSection
+        ZStack {
+            ScrollView {
+                if let user = model.user {
+                    VStack(spacing: 0) {
+                        header(for: user)
+                        VStack(spacing: 20) {
+                            actions
+                            infoCard(for: user)
+                            verifiedSubtitle(for: user)
+                            mediaSection
+                        }
+                        .padding()
+                    }
+                } else {
+                    ContentUnavailableView("User not found", systemImage: "person.crop.circle.badge.exclamationmark")
+                        .padding(.top, 60)
                 }
-                .padding()
-            } else {
-                ContentUnavailableView("User not found", systemImage: "person.crop.circle.badge.exclamationmark")
-                    .padding(.top, 60)
             }
-        }
-        .background(Color(uiColor: .systemGroupedBackground))
-        .navigationTitle("Profile")
-        .navigationBarTitleDisplayMode(.inline)
-        .fullScreenCover(isPresented: $showCall) {
-            SimulatedCallView(user: model.user)
-        }
-        .fullScreenCover(item: $viewerItem) { item in
-            ImageViewerView(fileName: item.fileName)
+            .background(Color(uiColor: .systemGroupedBackground))
+            .navigationTitle("Profile")
+            .navigationBarTitleDisplayMode(.inline)
+            .fullScreenCover(isPresented: $showCall) {
+                SimulatedCallView(user: model.user)
+            }
+            .fullScreenCover(item: $viewerItem) { item in
+                ImageViewerView(fileName: item.fileName)
+            }
+
+            if photoExpanded, let user = model.user {
+                expandedPhotoOverlay(for: user)
+            }
         }
     }
 
-    // MARK: - Sections
+    // MARK: - Header
 
     private func header(for user: User) -> some View {
         VStack(spacing: 10) {
-            AvatarView(title: user.name, seed: user.id, size: 108, isOnline: user.isOnline)
+            ZStack(alignment: .bottom) {
+                StretchyProfileBanner(user: user)
+
+                avatar(for: user)
+                    .offset(y: 54)
+                    .onTapGesture {
+                        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                            photoExpanded = true
+                        }
+                    }
+                    .accessibilityLabel("Expand profile photo")
+            }
+            .padding(.bottom, 54)
+
             HStack(spacing: 6) {
                 Text(user.name)
                     .font(.title2.weight(.semibold))
@@ -66,6 +90,72 @@ struct ProfileView: View {
         }
         .frame(maxWidth: .infinity)
     }
+
+    /// The avatar participates in the hero zoom transition only while the
+    /// expanded overlay is collapsed (matched geometry ids must be unique).
+    private func avatar(for user: User) -> some View {
+        ZStack {
+            if photoExpanded {
+                AvatarView(title: user.name, seed: user.id, size: 108, isOnline: user.isOnline, fileName: user.avatarFileName)
+            } else {
+                AvatarView(title: user.name, seed: user.id, size: 108, isOnline: user.isOnline, fileName: user.avatarFileName)
+                    .matchedGeometryEffect(id: "profile-avatar", in: avatarNamespace)
+            }
+        }
+        .overlay(
+            Circle()
+                .stroke(Color(uiColor: .systemBackground), lineWidth: 3)
+        )
+    }
+
+    // MARK: - Expanded photo (Telegram-style)
+
+    private func expandedPhotoOverlay(for user: User) -> some View {
+        ZStack {
+            Color.black.opacity(0.92)
+                .ignoresSafeArea()
+                .onTapGesture { collapsePhoto() }
+
+            VStack(spacing: 18) {
+                if let avatarFile = user.avatarFileName {
+                    StoredImageView(fileName: avatarFile)
+                        .frame(width: 300, height: 300)
+                        .clipShape(Circle())
+                        .overlay(Circle().stroke(.white.opacity(0.2), lineWidth: 1))
+                } else {
+                    AvatarView(title: user.name, seed: user.id, size: 260, fileName: user.avatarFileName)
+                }
+                .matchedGeometryEffect(id: "profile-avatar", in: avatarNamespace)
+
+                VStack(spacing: 4) {
+                    HStack(spacing: 6) {
+                        Text(user.name)
+                            .font(.title3.weight(.semibold))
+                            .foregroundStyle(.white)
+                        if user.isVerified {
+                            Image(systemName: "checkmark.seal.fill")
+                                .font(.body)
+                                .foregroundStyle(.tint)
+                        }
+                    }
+                    Text("@\(user.username)")
+                        .font(.subheadline)
+                        .foregroundStyle(.white.opacity(0.7))
+                }
+            }
+        }
+        .zIndex(10)
+        .transition(.opacity)
+        .onTapGesture { collapsePhoto() }
+    }
+
+    private func collapsePhoto() {
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
+            photoExpanded = false
+        }
+    }
+
+    // MARK: - Sections
 
     private var actions: some View {
         HStack(spacing: 24) {
@@ -89,6 +179,16 @@ struct ProfileView: View {
         .padding(.vertical, 6)
     }
 
+    @ViewBuilder
+    private func verifiedSubtitle(for user: User) -> some View {
+        if user.isVerified {
+            Text("Verified by Verification")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity)
+        }
+    }
+
     private func infoCard(for user: User) -> some View {
         VStack(spacing: 0) {
             if !user.bio.isEmpty {
@@ -98,6 +198,13 @@ struct ProfileView: View {
             infoRow(icon: "at", color: .orange, title: "@\(user.username)", subtitle: "Username")
             divider
             infoRow(icon: "phone.fill", color: .green, title: user.phone, subtitle: "Phone")
+            divider
+            infoRow(
+                icon: "calendar",
+                color: .purple,
+                title: user.registrationDateLabel,
+                subtitle: "Registration Date"
+            )
         }
         .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
     }

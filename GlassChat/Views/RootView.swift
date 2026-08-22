@@ -19,11 +19,19 @@ struct RootView: View {
             }
         }
         .tabBarMinimizeBehavior(.onScrollDown)
+        .overlay {
+            InAppNotificationView { banner in
+                InAppNotificationCenter.shared.dismiss()
+                appState.selectedTab = .chats
+                appState.pendingOpenChatID = banner.chatID
+            }
+        }
     }
 }
 
 struct ChatsTabView: View {
     @Environment(DataStore.self) private var store
+    @Environment(AppState.self) private var appState
     @State private var model = ChatsViewModel()
 
     var body: some View {
@@ -33,6 +41,17 @@ struct ChatsTabView: View {
                 .navigationDestination(for: AppRoute.self) { route in
                     destination(for: route)
                 }
+        }
+        .onChange(of: appState.pendingOpenChatID) { _, chatID in
+            guard let chatID else { return }
+            appState.pendingOpenChatID = nil
+            // Wait out any sheet dismissal animation before pushing — pushing
+            // mid-dismiss is silently dropped by UIKit (the compose bug).
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(500))
+                guard !model.showCompose else { return }
+                model.popToChat(chatID)
+            }
         }
     }
 

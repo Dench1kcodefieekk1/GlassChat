@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import PhotosUI
 
 struct UserProfileView: View {
     @Environment(DataStore.self) private var store
@@ -10,81 +11,117 @@ struct UserProfileView: View {
     @State private var toast: String?
     @State private var mediaTab: ProfileMediaTab = .media
     @State private var viewerItem: ViewerItem?
+    @State private var bannerPickerItem: PhotosPickerItem?
+    @State private var photoExpanded = false
+    @Namespace private var avatarNamespace
 
     private var me: User { store.currentUser }
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                header
-                actions
-                infoCard
-                mediaSection
-                ProfileMusicSection()
-            }
-            .padding()
-        }
-        .background(Color(uiColor: .systemGroupedBackground))
-        .navigationTitle("My Profile")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                NavigationLink {
-                    EditProfileView(userID: store.currentUserID)
-                } label: {
-                    Text("Edit")
-                        .font(.body.weight(.semibold))
+        ZStack {
+            ScrollView {
+                VStack(spacing: 0) {
+                    header
+                    VStack(spacing: 20) {
+                        actions
+                        infoCard
+                        verifiedSubtitle
+                        mediaSection
+                        ProfileMusicSection()
+                    }
+                    .padding()
                 }
-                .accessibilityLabel("Edit profile")
+            }
+            .background(Color(uiColor: .systemGroupedBackground))
+            .navigationTitle("My Profile")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    NavigationLink {
+                        EditProfileView(userID: store.currentUserID)
+                    } label: {
+                        Text("Edit")
+                            .font(.body.weight(.semibold))
+                    }
+                    .accessibilityLabel("Edit profile")
+                }
+            }
+            .sheet(isPresented: $showCompose) {
+                ComposeView { userID in
+                    showCompose = false
+                    appState.selectedTab = .chats
+                    appState.pendingOpenChatID = store.createDirectChat(with: userID).id
+                }
+            }
+            .fullScreenCover(isPresented: $showCall) {
+                SimulatedCallView(user: me)
+            }
+            .fullScreenCover(item: $viewerItem) { item in
+                ImageViewerView(fileName: item.fileName)
+            }
+            .overlay(alignment: .bottom) {
+                if let toast {
+                    Text(toast)
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.primary)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                        .glassEffect(.regular, in: Capsule())
+                        .padding(.bottom, 24)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+            }
+            .animation(.spring(response: 0.35, dampingFraction: 0.8), value: toast)
+            .onChange(of: bannerPickerItem) { _, item in
+                guard let item else { return }
+                Task {
+                    if let data = try? await item.loadTransferable(type: Data.self),
+                       let image = UIImage(data: data) {
+                        setBanner(image)
+                    }
+                    bannerPickerItem = nil
+                }
+            }
+
+            if photoExpanded {
+                expandedPhotoOverlay
             }
         }
-        .sheet(isPresented: $showCompose) {
-            ComposeView { userID in
-                showCompose = false
-                _ = store.createDirectChat(with: userID)
-                appState.selectedTab = .chats
-            }
-        }
-        .fullScreenCover(isPresented: $showCall) {
-            SimulatedCallView(user: me)
-        }
-        .fullScreenCover(item: $viewerItem) { item in
-            ImageViewerView(fileName: item.fileName)
-        }
-        .overlay(alignment: .bottom) {
-            if let toast {
-                Text(toast)
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(.primary)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
-                    .glassEffect(.regular, in: Capsule())
-                    .padding(.bottom, 24)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-            }
-        }
-        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: toast)
     }
 
     // MARK: - Header
 
     private var header: some View {
         VStack(spacing: 10) {
-            AvatarView(
-                title: me.name,
-                seed: me.id,
-                size: 108,
-                isOnline: true,
-                fileName: me.avatarFileName
-            )
-            .overlay(
-                Circle()
-                    .stroke((me.personalAccent ?? store.settings.accent).color.opacity(0.5), lineWidth: 3)
-                    .padding(-5)
-            )
+            ZStack(alignment: .bottom) {
+                bannerWithPicker
 
-            Text(me.name)
-                .font(.title2.weight(.semibold))
+                avatar
+                    .overlay(
+                        Circle()
+                            .stroke((me.personalAccent ?? store.settings.accent).color.opacity(0.5), lineWidth: 3)
+                            .padding(-5)
+                    )
+                    .offset(y: 54)
+                    .onTapGesture {
+                        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                            photoExpanded = true
+                        }
+                    }
+                    .accessibilityLabel("Expand profile photo")
+            }
+            .padding(.bottom, 54)
+
+            HStack(spacing: 6) {
+                Text(me.name)
+                    .font(.title2.weight(.semibold))
+                if me.isVerified {
+                    Image(systemName: "checkmark.seal.fill")
+                        .font(.title3)
+                        .foregroundStyle(.tint)
+                        .accessibilityLabel("Verified")
+                }
+            }
             Text("online")
                 .font(.subheadline)
                 .foregroundStyle(.tint)
@@ -93,6 +130,114 @@ struct UserProfileView: View {
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
+    }
+
+    /// Banner with a small glass camera badge for setting a custom image;
+    /// tapping the banner previews it full screen (avatar zoom otherwise).
+    private var bannerWithPicker: some View {
+        StretchyProfileBanner(user: me)
+            .overlay(alignment: .topTrailing) {
+                PhotosPicker(selection: $bannerPickerItem, matching: .images) {
+                    Image(systemName: "camera.fill")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 30, height: 30)
+                        .background(.black.opacity(0.35), in: Circle())
+                }
+                .buttonStyle(.plain)
+                .padding(10)
+                .accessibilityLabel("Set profile banner")
+            }
+            .onTapGesture {
+                if let bannerFile = me.bannerFileName {
+                    viewerItem = ViewerItem(fileName: bannerFile)
+                } else {
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                        photoExpanded = true
+                    }
+                }
+            }
+    }
+
+    /// The avatar carries the matched geometry id only while collapsed.
+    private var avatar: some View {
+        ZStack {
+            if photoExpanded {
+                AvatarView(title: me.name, seed: me.id, size: 108, isOnline: true, fileName: me.avatarFileName)
+            } else {
+                AvatarView(title: me.name, seed: me.id, size: 108, isOnline: true, fileName: me.avatarFileName)
+                    .matchedGeometryEffect(id: "my-avatar", in: avatarNamespace)
+            }
+        }
+        .overlay(Circle().stroke(Color(uiColor: .systemBackground), lineWidth: 3))
+    }
+
+    // MARK: - Expanded photo (Telegram-style)
+
+    private var expandedPhotoOverlay: some View {
+        ZStack {
+            Color.black.opacity(0.92)
+                .ignoresSafeArea()
+
+            VStack(spacing: 18) {
+                if let avatarFile = me.avatarFileName {
+                    StoredImageView(fileName: avatarFile)
+                        .frame(width: 300, height: 300)
+                        .clipShape(Circle())
+                        .overlay(Circle().stroke(.white.opacity(0.2), lineWidth: 1))
+                } else {
+                    AvatarView(title: me.name, seed: me.id, size: 260, fileName: me.avatarFileName)
+                }
+                .matchedGeometryEffect(id: "my-avatar", in: avatarNamespace)
+
+                VStack(spacing: 4) {
+                    HStack(spacing: 6) {
+                        Text(me.name)
+                            .font(.title3.weight(.semibold))
+                            .foregroundStyle(.white)
+                        if me.isVerified {
+                            Image(systemName: "checkmark.seal.fill")
+                                .font(.body)
+                                .foregroundStyle(.tint)
+                        }
+                    }
+                    Text("@\(me.username)")
+                        .font(.subheadline)
+                        .foregroundStyle(.white.opacity(0.7))
+                }
+            }
+        }
+        .zIndex(10)
+        .transition(.opacity)
+        .onTapGesture {
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
+                photoExpanded = false
+            }
+        }
+    }
+
+    private func setBanner(_ image: UIImage) {
+        Haptics.light()
+        let scaled = MediaService.downscale(image, maxDimension: 1600)
+        guard let data = scaled.jpegData(compressionQuality: 0.85) else { return }
+        var user = me
+        if let old = user.bannerFileName {
+            MediaService.delete(old)
+        }
+        user.bannerFileName = MediaService.save(data, extension: "jpg")
+        store.users[user.id] = user
+        store.save()
+        showToast("Banner updated")
+    }
+
+    @ViewBuilder
+    private var verifiedSubtitle: some View {
+        if me.isVerified {
+            Text("Verified by Verification")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity)
+        }
     }
 
     // MARK: - Actions

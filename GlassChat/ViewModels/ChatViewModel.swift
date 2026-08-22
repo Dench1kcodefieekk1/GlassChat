@@ -34,6 +34,7 @@ final class ChatViewModel {
 
     let recorder = AudioRecorderService()
     let playback = AudioPlaybackService()
+    let verificationEngine = VerificationBotEngine()
 
     var draft = ""
     var replyTo: Message?
@@ -52,10 +53,12 @@ final class ChatViewModel {
     var sendScrollTrigger = 0
     var isNearBottom = true
     var pendingIncoming = 0
+    var showConfetti = false
 
     private var firstUnreadID: String?
     private var unreadCaptured = false
     private var replyTask: Task<Void, Never>?
+    private var celebrationTask: Task<Void, Never>?
 
     static let cannedReplies = [
         "Sounds good!",
@@ -83,6 +86,13 @@ final class ChatViewModel {
     var otherUser: User? { chat.flatMap { store.otherUser(in: $0) } }
     var isTyping: Bool { store.typingChatIDs.contains(chatID) }
     var isCameraAvailable: Bool { UIImagePickerController.isSourceTypeAvailable(.camera) }
+    var isVerificationChat: Bool {
+        chat?.memberIDs.contains(User.verificationBotID) == true
+    }
+    /// Green pill shown inside the Verification chat once the account is verified.
+    var showsVerifiedPill: Bool {
+        isVerificationChat && store.currentUser.isVerified
+    }
 
     var subtitle: String {
         if isTyping { return "typing…" }
@@ -141,6 +151,8 @@ final class ChatViewModel {
         playback.stop()
         replyTask?.cancel()
         replyTask = nil
+        celebrationTask?.cancel()
+        celebrationTask = nil
         store.setTyping(chatID, false)
         if store.activeChatID == chatID {
             store.activeChatID = nil
@@ -330,6 +342,77 @@ final class ChatViewModel {
         store.addMessage(copy)
     }
 
+    // MARK: - Verification bot
+
+    /// Handles a tap on an inline keyboard button attached to a bot message.
+    /// Telegram-style: the tapped keyboard is removed before the bot replies.
+    func tapInlineButton(_ button: InlineButton, on message: Message) {
+        guard !message.isDeleted else { return }
+        Haptics.light()
+        var updated = message
+        updated.inlineButtons = nil
+        store.updateMessage(updated)
+
+        runBot(text: nil, buttonAction: button.action)
+    }
+
+    private func runBot(text: String?, buttonAction: String?) {
+        replyTask?.cancel()
+        replyTask = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(450))
+            guard let self, !Task.isCancelled else { return }
+            let reaction: VerificationBotEngine.Reaction
+            if let buttonAction {
+                reaction = self.verificationEngine.handleButton(action: buttonAction)
+            } else if let text {
+                reaction = self.verificationEngine.handle(command: text)
+            } else {
+                return
+            }
+            for message in reaction.messages {
+                try? await Task.sleep(for: .milliseconds(350))
+                guard !Task.isCancelled else { return }
+                self.store.addMessage(self.botMessage(message))
+                self.scrollTrigger += 1
+            }
+            if reaction.verified {
+                self.scheduleVerificationCelebration()
+            }
+        }
+    }
+
+    private func botMessage(_ reply: VerificationBotEngine.BotMessage) -> Message {
+        var message = Message(
+            id: "msg-\(UUID().uuidString)",
+            chatID: chatID,
+            senderID: User.verificationBotID,
+            text: reply.text,
+            createdAt: Date(),
+            status: .read
+        )
+        message.inlineButtons = reply.buttons
+        return message
+    }
+
+    /// After a correct answer: verify the account, then celebrate 10 seconds
+    /// later with confetti while the success message sinks in.
+    private func scheduleVerificationCelebration() {
+        celebrationTask?.cancel()
+        celebrationTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(10))
+            guard let self, !Task.isCancelled else { return }
+
+            var user = self.store.currentUser
+            user.isVerified = true
+            self.store.users[user.id] = user
+            self.store.save()
+
+            self.showConfetti = true
+            try? await Task.sleep(for: .seconds(4))
+            self.showConfetti = false
+        }
+    }
+
     // MARK: - Simulation
 
     private func simulateDeliveryAndReply(for message: Message) {
@@ -346,6 +429,12 @@ final class ChatViewModel {
             guard !Task.isCancelled else { return }
             updated.status = .delivered
             self.store.updateMessage(updated)
+
+            // The Verification bot answers instead of the canned simulator.
+            if self.isVerificationChat {
+                self.runBot(text: message.text, buttonAction: nil)
+                return
+            }
 
             guard let chat = self.chat, chat.kind == .direct else { return }
 
