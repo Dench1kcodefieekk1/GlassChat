@@ -102,10 +102,6 @@ struct ProfileView: View {
                     .matchedGeometryEffect(id: "profile-avatar", in: avatarNamespace)
             }
         }
-        .overlay(
-            Circle()
-                .stroke(Color(uiColor: .systemBackground), lineWidth: 3)
-        )
     }
 
     // MARK: - Expanded photo (Telegram-style)

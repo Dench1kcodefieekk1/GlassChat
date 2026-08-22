@@ -29,6 +29,8 @@ struct Message: Identifiable, Codable, Hashable {
     var forwardedFrom: String? = nil
     var reactions: [String: [String]] = [:]
     var inlineButtons: [InlineButton]? = nil
+    /// Centered Telegram-gift-style system pill (e.g. "Ваш аккаунт верифицирован").
+    var isSystemPill: Bool = false
 }
 
 extension Message {

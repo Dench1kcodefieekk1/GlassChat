@@ -97,11 +97,6 @@ struct UserProfileView: View {
                 bannerWithPicker
 
                 avatar
-                    .overlay(
-                        Circle()
-                            .stroke((me.personalAccent ?? store.settings.accent).color.opacity(0.5), lineWidth: 3)
-                            .padding(-5)
-                    )
                     .offset(y: 54)
                     .onTapGesture {
                         withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
@@ -169,7 +164,6 @@ struct UserProfileView: View {
                     .matchedGeometryEffect(id: "my-avatar", in: avatarNamespace)
             }
         }
-        .overlay(Circle().stroke(Color(uiColor: .systemBackground), lineWidth: 3))
     }
 
     // MARK: - Expanded photo (Telegram-style)

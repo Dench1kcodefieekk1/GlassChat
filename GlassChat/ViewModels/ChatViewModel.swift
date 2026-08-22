@@ -54,6 +54,8 @@ final class ChatViewModel {
     var isNearBottom = true
     var pendingIncoming = 0
     var showConfetti = false
+    var celebrationMessageID: String? = nil
+    var pillFrame: CGRect? = nil
 
     private var firstUnreadID: String?
     private var unreadCaptured = false
@@ -88,10 +90,6 @@ final class ChatViewModel {
     var isCameraAvailable: Bool { UIImagePickerController.isSourceTypeAvailable(.camera) }
     var isVerificationChat: Bool {
         chat?.memberIDs.contains(User.verificationBotID) == true
-    }
-    /// Green pill shown inside the Verification chat once the account is verified.
-    var showsVerifiedPill: Bool {
-        isVerificationChat && store.currentUser.isVerified
     }
 
     var subtitle: String {
@@ -394,23 +392,46 @@ final class ChatViewModel {
         return message
     }
 
-    /// After a correct answer: verify the account, then celebrate 10 seconds
-    /// later with confetti while the success message sinks in.
+    /// After a correct answer: the account flips to verified immediately
+    /// (memory + disk), then a gift-style pill message drops into the chat
+    /// after a randomized 5–12 s delay, with confetti bursting from the pill.
     private func scheduleVerificationCelebration() {
         celebrationTask?.cancel()
+
+        var user = store.currentUser
+        user.isVerified = true
+        store.users[user.id] = user
+        store.save()
+
         celebrationTask = Task { [weak self] in
-            try? await Task.sleep(for: .seconds(10))
+            let delay = Double.random(in: 5...12)
+            try? await Task.sleep(for: .seconds(delay))
             guard let self, !Task.isCancelled else { return }
 
-            var user = self.store.currentUser
-            user.isVerified = true
-            self.store.users[user.id] = user
-            self.store.save()
+            var pill = Message(
+                id: "msg-\(UUID().uuidString)",
+                chatID: self.chatID,
+                senderID: User.verificationBotID,
+                text: "Ваш аккаунт верифицирован",
+                createdAt: Date(),
+                status: .read
+            )
+            pill.isSystemPill = true
 
+            self.store.addMessage(pill)
+            self.celebrationMessageID = pill.id
+            self.pillFrame = nil
+            self.scrollTrigger += 1
             self.showConfetti = true
-            try? await Task.sleep(for: .seconds(4))
+
+            try? await Task.sleep(for: .seconds(3.5))
             self.showConfetti = false
         }
+    }
+
+    /// Global frame of the gift pill row; anchors the confetti burst.
+    func reportCelebrationPillFrame(_ rect: CGRect) {
+        pillFrame = rect
     }
 
     // MARK: - Simulation
