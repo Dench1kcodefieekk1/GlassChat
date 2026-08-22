@@ -27,7 +27,7 @@ final class AudioRecorderService {
         guard await AVAudioApplication.requestRecordPermission() else { return false }
 
         let session = AVAudioSession.sharedInstance()
-        try? session.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker, .allowBluetooth])
+        try? session.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker, .allowBluetoothHFP])
         try? session.setActive(true, options: .notifyOthersOnDeactivation)
 
         let url = FileManager.default.temporaryDirectory
