@@ -1,6 +1,5 @@
 import SwiftUI
 import UIKit
-import PhotosUI
 
 struct UserProfileView: View {
     @Environment(DataStore.self) private var store
@@ -11,7 +10,6 @@ struct UserProfileView: View {
     @State private var toast: String?
     @State private var mediaTab: ProfileMediaTab = .media
     @State private var viewerItem: ViewerItem?
-    @State private var bannerPickerItem: PhotosPickerItem?
     @State private var photoExpanded = false
     @Namespace private var avatarNamespace
 
@@ -71,16 +69,6 @@ struct UserProfileView: View {
                 }
             }
             .animation(.spring(response: 0.35, dampingFraction: 0.8), value: toast)
-            .onChange(of: bannerPickerItem) { _, item in
-                guard let item else { return }
-                Task {
-                    if let data = try? await item.loadTransferable(type: Data.self),
-                       let image = UIImage(data: data) {
-                        setBanner(image)
-                    }
-                    bannerPickerItem = nil
-                }
-            }
 
             if photoExpanded {
                 expandedPhotoOverlay
@@ -90,21 +78,16 @@ struct UserProfileView: View {
 
     // MARK: - Header
 
+    /// Clean centered avatar on the solid background — no banner or glow.
     private var header: some View {
         VStack(spacing: 10) {
-            ZStack(alignment: .bottom) {
-                bannerWithPicker
-
-                avatar
-                    .offset(y: 54)
-                    .onTapGesture {
-                        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                            photoExpanded = true
-                        }
+            avatar
+                .onTapGesture {
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                        photoExpanded = true
                     }
-                    .accessibilityLabel("Expand profile photo")
-            }
-            .padding(.bottom, 54)
+                }
+                .accessibilityLabel("Expand profile photo")
 
             HStack(spacing: 6) {
                 Text(me.name)
@@ -124,33 +107,7 @@ struct UserProfileView: View {
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
-    }
-
-    /// Banner with a small glass camera badge for setting a custom image;
-    /// tapping the banner previews it full screen (avatar zoom otherwise).
-    private var bannerWithPicker: some View {
-        StretchyProfileBanner(user: me)
-            .overlay(alignment: .topTrailing) {
-                PhotosPicker(selection: $bannerPickerItem, matching: .images) {
-                    Image(systemName: "camera.fill")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .frame(width: 30, height: 30)
-                        .background(.black.opacity(0.35), in: Circle())
-                }
-                .buttonStyle(.plain)
-                .padding(10)
-                .accessibilityLabel("Set profile banner")
-            }
-            .onTapGesture {
-                if let bannerFile = me.bannerFileName {
-                    viewerItem = ViewerItem(fileName: bannerFile)
-                } else {
-                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                        photoExpanded = true
-                    }
-                }
-            }
+        .padding(.top, 8)
     }
 
     /// The avatar carries the matched geometry id only while collapsed.
@@ -209,20 +166,6 @@ struct UserProfileView: View {
                 photoExpanded = false
             }
         }
-    }
-
-    private func setBanner(_ image: UIImage) {
-        Haptics.light()
-        let scaled = MediaService.downscale(image, maxDimension: 1600)
-        guard let data = scaled.jpegData(compressionQuality: 0.85) else { return }
-        var user = me
-        if let old = user.bannerFileName {
-            MediaService.delete(old)
-        }
-        user.bannerFileName = MediaService.save(data, extension: "jpg")
-        store.users[user.id] = user
-        store.save()
-        showToast("Banner updated")
     }
 
     // MARK: - Actions

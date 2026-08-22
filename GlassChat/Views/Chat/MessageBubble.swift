@@ -137,7 +137,6 @@ struct MessageRow: View {
             }
         }
         .padding(8)
-        .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             (isOwn ? Color.white.opacity(0.14) : Color(uiColor: .tertiarySystemFill)),
             in: RoundedRectangle(cornerRadius: 10, style: .continuous)
@@ -145,6 +144,9 @@ struct MessageRow: View {
     }
 
     private var metaRow: some View {
+        // No expanding frame here: the bubble must shrink-wrap its content
+        // (Telegram-style) — a maxWidth .infinity would blow every short
+        // message ("/start") out to full row width.
         HStack(spacing: 4) {
             if message.isEdited {
                 Text("edited")
@@ -157,7 +159,6 @@ struct MessageRow: View {
             }
         }
         .foregroundStyle(isOwn ? AnyShapeStyle(.white.opacity(0.8)) : AnyShapeStyle(.secondary))
-        .frame(maxWidth: .infinity, alignment: .trailing)
     }
 
     @ViewBuilder
