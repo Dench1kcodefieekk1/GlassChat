@@ -18,8 +18,14 @@ struct AvatarFrameOverlayView<Content: View>: View {
             content
             if let frame {
                 ring(for: frame)
+                    // Circles are infinitely flexible shapes — without a hard
+                    // bound the ring accepts the full proposed (screen) width.
+                    .frame(width: avatarSize + 12, height: avatarSize + 12)
             }
         }
+        // Strictly bind the decoration container to the avatar bounds; never
+        // expand to the surrounding layout.
+        .frame(width: avatarSize + 12, height: avatarSize + 12)
     }
 
     @ViewBuilder
