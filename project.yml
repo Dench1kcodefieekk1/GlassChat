@@ -20,7 +20,8 @@ targets:
     sources:
       # Folder-based source: XcodeGen automatically includes every Swift file
       # under GlassChat/ — including Services/AudioPlayerManager.swift (MusicManager),
-      # Views/Profile/ProfileMusicSection.swift and Views/Chat/AudioMessageBubble.swift.
+      # Views/Profile/ProfileMusicSection.swift, Views/Chat/AudioMessageBubble.swift
+      # and Views/Chat/DocumentPicker.swift.
       # Covers all Views/, Models/, Services/, Repositories/, ViewModels/, App/, Theme/.
       - path: GlassChat
     settings:

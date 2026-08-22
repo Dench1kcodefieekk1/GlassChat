@@ -143,7 +143,7 @@ struct UserProfileView: View {
             infoRow(
                 icon: "calendar",
                 color: .purple,
-                title: me.registeredAt.map { $0.formatted(.dateTime.month(.wide).year()) } ?? "October 2023",
+                title: me.registrationDateLabel,
                 subtitle: "Registration Date",
                 copyable: false
             )

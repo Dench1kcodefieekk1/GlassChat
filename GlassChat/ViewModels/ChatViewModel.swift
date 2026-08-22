@@ -1,6 +1,7 @@
 import SwiftUI
 import UIKit
 import PhotosUI
+import AVFoundation
 import Observation
 
 enum ChatRowKind {
@@ -225,6 +226,7 @@ final class ChatViewModel {
             id: "att-\(UUID().uuidString)",
             kind: .file,
             fileName: fileName,
+            duration: Self.probedAudioDuration(for: fileName, extension: ext),
             displayName: url.lastPathComponent,
             fileSize: Int64(data.count)
         )]
@@ -232,6 +234,14 @@ final class ChatViewModel {
         scrollTrigger += 1
         sendScrollTrigger += 1
         simulateDeliveryAndReply(for: message)
+    }
+
+    /// Reads the real duration of picked audio files (`.mp3`, `.m4a`, …) so
+    /// bubbles and the profile music list can display it immediately.
+    private static func probedAudioDuration(for fileName: String, extension ext: String) -> TimeInterval? {
+        let audioExtensions: Set<String> = ["mp3", "m4a", "aac", "wav", "aiff", "caf"]
+        guard audioExtensions.contains(ext) else { return nil }
+        return (try? AVAudioPlayer(contentsOf: MediaService.url(for: fileName)))?.duration
     }
 
     // MARK: - Voice

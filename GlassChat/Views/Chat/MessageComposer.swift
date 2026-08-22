@@ -54,7 +54,7 @@ struct MessageComposer: View {
     private var attachmentButton: some View {
         Button {
             Haptics.light()
-            model.showAttachmentSheet = true
+            model.showFilePicker = true
         } label: {
             Image(systemName: "paperclip")
                 .font(.system(size: 19, weight: .medium))
@@ -63,8 +63,13 @@ struct MessageComposer: View {
                 .contentShape(Circle())
         }
         .buttonStyle(PressScaleButtonStyle(scale: 0.9))
+        .onLongPressGesture(minimumDuration: 0.45) {
+            Haptics.light()
+            model.showAttachmentSheet = true
+        }
         .glassEffect(.regular.interactive(), in: Circle())
-        .accessibilityLabel("Add attachment")
+        .accessibilityLabel("Attach file or audio")
+        .accessibilityHint("Touch and hold for photos and camera")
     }
 
     // MARK: - Input field

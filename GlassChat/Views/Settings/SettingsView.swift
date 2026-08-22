@@ -1,12 +1,10 @@
 import SwiftUI
-import PhotosUI
 
 struct SettingsHomeView: View {
     @Environment(DataStore.self) private var store
     @AppStorage("isLoggedIn") private var isLoggedIn = false
     @State private var model = SettingsViewModel()
     @State private var showAddAccount = false
-    @State private var avatarPickerItem: PhotosPickerItem?
     @AppStorage("userPhone") private var userPhone = "+380 99 123 4567"
 
     private var me: User { store.currentUser }
@@ -21,6 +19,7 @@ struct SettingsHomeView: View {
             generalSection
             otherSection
             logoutSection
+            addAccountSection
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
@@ -31,16 +30,6 @@ struct SettingsHomeView: View {
         }
         .sheet(isPresented: $showAddAccount) {
             AddAccountSheet()
-        }
-        .onChange(of: avatarPickerItem) { _, item in
-            guard let item else { return }
-            Task {
-                if let data = try? await item.loadTransferable(type: Data.self),
-                   let image = UIImage(data: data) {
-                    setProfilePhoto(image)
-                }
-                avatarPickerItem = nil
-            }
         }
     }
 
@@ -92,19 +81,25 @@ struct SettingsHomeView: View {
                 settingsIcon("person.crop.circle.fill", color: .accentColor)
                 Text("My Profile")
             }
+        }
+    }
 
-            PhotosPicker(selection: $avatarPickerItem, matching: .images) {
-                settingsIcon("camera.fill", color: .blue)
-                Text("Change Photo")
-            }
-            .foregroundStyle(.primary)
+    // MARK: - Add account (bottom)
 
+    private var addAccountSection: some View {
+        Section {
             Button {
                 Haptics.light()
                 showAddAccount = true
             } label: {
-                settingsIcon("person.badge.plus", color: .green)
-                Text("Add Account")
+                HStack {
+                    settingsIcon("person.badge.plus", color: .green)
+                    Text("Add Account")
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(Color(uiColor: .tertiaryLabel))
+                }
             }
             .foregroundStyle(.primary)
         }
@@ -263,19 +258,6 @@ struct SettingsHomeView: View {
             .frame(width: 29, height: 29)
             .background(color.gradient, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
             .accessibilityHidden(true)
-    }
-
-    private func setProfilePhoto(_ image: UIImage) {
-        Haptics.light()
-        let scaled = MediaService.downscale(image, maxDimension: 512)
-        guard let data = scaled.jpegData(compressionQuality: 0.85) else { return }
-        var user = me
-        if let old = user.avatarFileName {
-            MediaService.delete(old)
-        }
-        user.avatarFileName = MediaService.save(data, extension: "jpg")
-        store.users[user.id] = user
-        store.save()
     }
 }
 

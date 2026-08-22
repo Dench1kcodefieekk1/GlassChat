@@ -1,7 +1,6 @@
 import SwiftUI
 import UIKit
 import PhotosUI
-import UniformTypeIdentifiers
 
 struct ChatView: View {
     @Environment(DataStore.self) private var store
@@ -46,9 +45,8 @@ struct ChatView: View {
                     model.pickerItem = nil
                 }
             }
-            .fileImporter(isPresented: $model.showFilePicker,
-                          allowedContentTypes: [.item]) { result in
-                if case .success(let url) = result {
+            .sheet(isPresented: $model.showFilePicker) {
+                DocumentPicker { url in
                     model.attachFile(at: url)
                 }
             }

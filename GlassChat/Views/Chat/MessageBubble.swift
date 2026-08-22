@@ -86,7 +86,11 @@ struct MessageRow: View {
             case .voice:
                 VoiceBubble(attachment: attachment, isOwn: isOwn, playback: model.playback)
             case .file:
-                FileBubble(attachment: attachment, isOwn: isOwn)
+                if attachment.isAudioFile {
+                    AudioFileBubble(attachment: attachment, isOwn: isOwn, playback: model.playback)
+                } else {
+                    FileBubble(attachment: attachment, isOwn: isOwn)
+                }
             }
         }
 
@@ -249,7 +253,7 @@ struct MessageRow: View {
             Button("Forward", systemImage: "arrowshape.turn.up.right") {
                 model.forwardMessage = message
             }
-            if !isOwn, let audio = message.attachments.first(where: \.isMusicAttachment) {
+            if let audio = message.attachments.first(where: \.isMusicAttachment) {
                 Button {
                     AudioMessageActions.saveToProfileMusic(
                         attachment: audio,
