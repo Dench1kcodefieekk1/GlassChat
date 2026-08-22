@@ -91,6 +91,16 @@ final class ChatViewModel {
     var isVerificationChat: Bool {
         chat?.memberIDs.contains(User.verificationBotID) == true
     }
+    var isWalletChat: Bool {
+        chat?.memberIDs.contains(User.walletBotID) == true
+    }
+    var isFragmentChat: Bool {
+        chat?.memberIDs.contains(User.fragmentBotID) == true
+    }
+    /// System bots (Verification / Wallet / Fragment) never send canned replies.
+    var isSystemBotChat: Bool {
+        isVerificationChat || isWalletChat || isFragmentChat
+    }
 
     var subtitle: String {
         if isTyping { return "typing…" }
@@ -434,6 +444,9 @@ final class ChatViewModel {
             // The Verification bot answers instead of the canned simulator.
             if self.isVerificationChat {
                 self.runBot(text: message.text, buttonAction: nil)
+                return
+            }
+            if self.isSystemBotChat {
                 return
             }
 

@@ -10,8 +10,6 @@ struct UserProfileView: View {
     @State private var mediaTab: ProfileMediaTab = .media
     @State private var viewerItem: ViewerItem?
     @State private var photoExpanded = false
-    @State private var giftsModel = GiftsViewModel()
-    @State private var selectedGift: GiftItem?
     @Namespace private var avatarNamespace
 
     private var me: User { store.currentUser }
@@ -312,36 +310,9 @@ struct UserProfileView: View {
                 filesList
             case .links:
                 linksList
-            case .gifts:
-                giftsGrid
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    @ViewBuilder
-    private var giftsGrid: some View {
-        GiftsGridView(gifts: giftsModel.gifts) { gift in
-            Haptics.light()
-            selectedGift = gift
-        }
-        .sheet(item: $selectedGift) { gift in
-            if gift.kind.rarity == .nft {
-                NFTGiftDetailView(
-                    gift: gift,
-                    ownerName: me.name,
-                    isWorn: giftsModel.isWorn(gift),
-                    onToggleVisibility: { giftsModel.toggleHidden(gift) },
-                    onWear: { giftsModel.toggleWorn(gift) }
-                )
-            } else {
-                StandardGiftDetailView(
-                    gift: gift,
-                    onToggleVisibility: { giftsModel.toggleHidden(gift) },
-                    onSendGift: { showToast("Подарок отправлен") }
-                )
-            }
-        }
     }
 
     private var myMedia: [SharedMediaItem] {
@@ -481,7 +452,6 @@ enum ProfileMediaTab: String, CaseIterable, Identifiable {
     case media
     case files
     case links
-    case gifts
 
     var id: String { rawValue }
 
@@ -490,7 +460,6 @@ enum ProfileMediaTab: String, CaseIterable, Identifiable {
         case .media: return "Media"
         case .files: return "Files"
         case .links: return "Links"
-        case .gifts: return "Gifts"
         }
     }
 }

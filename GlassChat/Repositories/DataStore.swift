@@ -69,23 +69,24 @@ final class DataStore {
             store = DataStore(snapshot: DemoSeeder.makeSnapshot())
             store.save()
         }
-        // Existing installs persisted before the bot existed still get it.
+        // Existing installs persisted before the system bots existed still get them.
         store.ensureVerificationBot()
+        store.ensureWalletBot()
+        store.ensureFragmentBot()
         return store
     }
 
-    /// Idempotently creates the system Verification bot, its chat, and the
-    /// intro message so both fresh and upgraded installs see the flow.
-    func ensureVerificationBot() {
-        let botChatID = "chat-verification"
+    /// Idempotently creates a system bot, its direct chat, and an intro
+    /// message so both fresh and upgraded installs see it.
+    private func ensureSystemBot(id: String, name: String, username: String, chatID: String, intro: String) {
         var changed = false
 
-        if users[User.verificationBotID] == nil {
+        if users[id] == nil {
             let bot = User(
-                id: User.verificationBotID,
-                name: "Verification",
-                username: "verification",
-                bio: "Official verification bot.",
+                id: id,
+                name: name,
+                username: username,
+                bio: "System bot.",
                 phone: "",
                 isVerified: true
             )
@@ -93,23 +94,23 @@ final class DataStore {
             changed = true
         }
 
-        if !chats.contains(where: { $0.kind == .direct && $0.memberIDs.contains(User.verificationBotID) }) {
+        if !chats.contains(where: { $0.kind == .direct && $0.memberIDs.contains(id) }) {
             chats.append(Chat(
-                id: botChatID,
+                id: chatID,
                 kind: .direct,
-                title: "Verification",
-                memberIDs: [currentUserID, User.verificationBotID]
+                title: name,
+                memberIDs: [currentUserID, id]
             ))
             changed = true
         }
 
-        if messages[botChatID, default: []].isEmpty {
-            messages[botChatID] = [
+        if messages[chatID, default: []].isEmpty {
+            messages[chatID] = [
                 Message(
-                    id: "msg-bot-intro",
-                    chatID: botChatID,
-                    senderID: User.verificationBotID,
-                    text: "Добро пожаловать! Отправьте /start, чтобы пройти верификацию и получить галочку рядом с именем.",
+                    id: "msg-\(id)-intro",
+                    chatID: chatID,
+                    senderID: id,
+                    text: intro,
                     createdAt: Date(),
                     status: .read
                 )
@@ -120,6 +121,51 @@ final class DataStore {
         if changed {
             save()
         }
+    }
+
+    func ensureVerificationBot() {
+        ensureSystemBot(
+            id: User.verificationBotID,
+            name: "Verification",
+            username: "verification",
+            chatID: "chat-verification",
+            intro: "Добро пожаловать! Отправьте /start, чтобы пройти верификацию и получить галочку рядом с именем."
+        )
+    }
+
+    func ensureWalletBot() {
+        ensureSystemBot(
+            id: User.walletBotID,
+            name: "Wallet",
+            username: "wallet",
+            chatID: "chat-wallet",
+            intro: "Ваш кошелёк GlassChat. Откройте мини-приложение ниже, чтобы управлять балансом $TYP0K и USDT."
+        )
+    }
+
+    func ensureFragmentBot() {
+        ensureSystemBot(
+            id: User.fragmentBotID,
+            name: "Fragment Market",
+            username: "fragment",
+            chatID: "chat-fragment",
+            intro: "Fragment — маркетплейс уникальных юзернеймов. Откройте мини-приложение ниже, чтобы выкупить редкий юзернейм."
+        )
+    }
+
+    /// Posts an official bot message (receipts, notifications) into a chat.
+    @discardableResult
+    func postSystemMessage(chatID: String, senderID: String, text: String) -> Message {
+        let message = Message(
+            id: "msg-\(UUID().uuidString)",
+            chatID: chatID,
+            senderID: senderID,
+            text: text,
+            createdAt: Date(),
+            status: .read
+        )
+        addMessage(message)
+        return message
     }
 
     func save() {

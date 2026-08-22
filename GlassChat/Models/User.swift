@@ -30,6 +30,10 @@ struct User: Identifiable, Codable, Hashable {
     static let currentID = "user-me"
     /// System bot that owns the in-app verification flow.
     static let verificationBotID = "user-verification"
+    /// System bot that owns the Wallet mini app.
+    static let walletBotID = "user-wallet"
+    /// System bot that owns the Fragment username market mini app.
+    static let fragmentBotID = "user-fragment"
 }
 
 // MARK: - Backward-compatible decoding

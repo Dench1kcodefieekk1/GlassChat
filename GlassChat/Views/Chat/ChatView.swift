@@ -6,6 +6,8 @@ struct ChatView: View {
     @Environment(DataStore.self) private var store
     @Environment(\.dismiss) private var dismiss
     @State private var model: ChatViewModel
+    @State private var showWalletApp = false
+    @State private var showFragmentApp = false
     private let verification = VerificationManager.shared
 
     init(chatID: String, store: DataStore) {
@@ -91,6 +93,19 @@ struct ChatView: View {
                 }
             }
             .animation(.easeInOut(duration: 0.25), value: model.showConfetti)
+            .overlay(alignment: .bottom) {
+                if model.isWalletChat {
+                    miniAppPill("👛 Open Wallet Mini App") { showWalletApp = true }
+                } else if model.isFragmentChat {
+                    miniAppPill("🌐 Open Fragment Mini App") { showFragmentApp = true }
+                }
+            }
+            .sheet(isPresented: $showWalletApp) {
+                WalletMiniAppView()
+            }
+            .sheet(isPresented: $showFragmentApp) {
+                FragmentMiniAppView()
+            }
             .alert("Microphone access needed", isPresented: $model.recordingDenied) {
                 Button("OK", role: .cancel) {}
             } message: {
@@ -211,6 +226,26 @@ struct ChatView: View {
                 .contentShape(Circle())
         }
         .accessibilityLabel("Chat options")
+    }
+
+    // MARK: - Mini app launcher
+
+    /// Persistent launcher pill pinned above the composer in system bot chats.
+    private func miniAppPill(_ title: String, action: @escaping () -> Void) -> some View {
+        Button {
+            Haptics.medium()
+            action()
+        } label: {
+            Text(title)
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(.primary)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .glassEffect(.regular.interactive(), in: Capsule())
+                .shadow(color: .black.opacity(0.15), radius: 8, y: 3)
+        }
+        .padding(.bottom, 74)
+        .accessibilityLabel(title)
     }
 
     // MARK: - Message list
