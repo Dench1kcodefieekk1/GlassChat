@@ -17,7 +17,7 @@ final class NotificationService: NSObject, UNUserNotificationCenterDelegate {
         let content = UNMutableNotificationContent()
         content.title = chatTitle
         content.body = settings.notifyPreview ? text : "New message"
-        if settings.notifySounds {
+        if settings.notifySounds, settings.notificationSound != .none {
             content.sound = .default
         }
         let request = UNNotificationRequest(

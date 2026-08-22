@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import SwiftUI
 
 struct Snapshot: Codable {
     var currentUserID: String
@@ -274,5 +275,14 @@ enum MessagePreview {
             }
         }
         return message.text
+    }
+}
+
+extension View {
+    /// Persists settings whenever any settings value changes on screen.
+    func autosaveSettings(_ store: DataStore) -> some View {
+        onChange(of: store.settings) {
+            store.save()
+        }
     }
 }

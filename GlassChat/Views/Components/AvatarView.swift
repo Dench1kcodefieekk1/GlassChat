@@ -7,6 +7,9 @@ struct AvatarView: View {
     var symbol: String? = nil
     var size: CGFloat = 50
     var isOnline: Bool = false
+    var fileName: String? = nil
+
+    @State private var loadedImage: UIImage?
 
     private var initials: String {
         title.split(separator: " ").prefix(2).compactMap { $0.first.map(String.init) }.joined()
@@ -15,19 +18,25 @@ struct AvatarView: View {
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
             ZStack {
-                LinearGradient(
-                    colors: AppTheme.avatarColors(for: seed),
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                if let symbol {
-                    Image(systemName: symbol)
-                        .font(.system(size: size * 0.42, weight: .medium))
-                        .foregroundStyle(.white)
+                if let loadedImage {
+                    Image(uiImage: loadedImage)
+                        .resizable()
+                        .scaledToFill()
                 } else {
-                    Text(initials)
-                        .font(.system(size: size * 0.38, weight: .semibold))
-                        .foregroundStyle(.white)
+                    LinearGradient(
+                        colors: AppTheme.avatarColors(for: seed),
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                    if let symbol {
+                        Image(systemName: symbol)
+                            .font(.system(size: size * 0.42, weight: .medium))
+                            .foregroundStyle(.white)
+                    } else {
+                        Text(initials)
+                            .font(.system(size: size * 0.38, weight: .semibold))
+                            .foregroundStyle(.white)
+                    }
                 }
             }
             .frame(width: size, height: size)
@@ -41,6 +50,13 @@ struct AvatarView: View {
                         Circle().stroke(Color(uiColor: .systemBackground), lineWidth: 2)
                     )
             }
+        }
+        .task(id: fileName) {
+            guard let fileName else {
+                loadedImage = nil
+                return
+            }
+            loadedImage = ImageCache.shared.image(for: fileName)
         }
         .accessibilityLabel(Text(title))
     }

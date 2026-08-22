@@ -19,7 +19,7 @@ struct ChatView: View {
             }
             .toolbar(.hidden, for: .navigationBar)
             .toolbar(.hidden, for: .tabBar)
-            .background(Color(uiColor: .systemGroupedBackground))
+            .background(ChatWallpaperView(wallpaper: store.settings.wallpaper).ignoresSafeArea())
             .onAppear { model.activate() }
             .onDisappear { model.deactivate() }
             .onChange(of: store.sortedMessages(for: model.chatID).count) { oldValue, newValue in

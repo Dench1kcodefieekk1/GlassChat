@@ -250,9 +250,9 @@ Connect API key (`xcrun altool` / `xcrun notarytool`-style tooling or
 | Photos | PhotosPicker, caption preview sheet, in-bubble thumbnails, full-screen viewer with pinch-to-zoom, ShareLink |
 | Camera | System camera capture (on devices that have one) |
 | Voice messages | AVAudioRecorder with live level waveform, cancel/send, AVAudioPlayer playback with progress-colored waveform |
-| Profile | Large avatar, status, bio/phone/username card, Message/Call/Mute actions, shared media grid, simulated call screen |
 | Contacts | Alphabetical grouping, search, online status, start chat |
-| Settings | Appearance (light/dark/system + 6 accent colors), chat/notifications/privacy toggles, storage usage, clear cache, edit profile, about/licenses — all persisted |
+| Settings | Telegram-style multi-screen hierarchy: profile card → My Profile → Edit Profile, Notifications & Sounds, Privacy (passcode, two-step, blocked users), Active Sessions, Appearance (theme + accent), Chats (text size, wallpaper, bubble style), Language, About — all persisted |
+| Profile | Dedicated user profile screen with glass header, Message/Call/Video/Search actions, copyable info rows, shared media (Media/Files/Links), full edit flow (photo, names, bio with 70-char counter, username validation, phone change, personal accent, channel linking) |
 | Search | Global chat + message search, contacts search |
 | Persistence | Everything survives app restarts (JSON store in Application Support) |
 | States | Empty chats, empty search, loading images, deleted media placeholders, mic permission alert |

@@ -109,7 +109,7 @@ struct MessageRow: View {
                 Text(message.text)
             }
         }
-        .font(.body)
+        .font(.system(size: store.settings.messageTextSize))
         .foregroundStyle(isOwn ? AnyShapeStyle(.white) : AnyShapeStyle(.primary))
         .textSelection(.enabled)
         .multilineTextAlignment(.leading)
@@ -177,11 +177,12 @@ struct MessageRow: View {
     }
 
     private var bubbleBackground: some View {
-        UnevenRoundedRectangle(
-            topLeadingRadius: AppTheme.bubbleRadius,
-            bottomLeadingRadius: isOwn ? AppTheme.bubbleRadius : 6,
-            bottomTrailingRadius: isOwn ? 6 : AppTheme.bubbleRadius,
-            topTrailingRadius: AppTheme.bubbleRadius,
+        let radius = store.settings.bubbleStyle.cornerRadius
+        return UnevenRoundedRectangle(
+            topLeadingRadius: radius,
+            bottomLeadingRadius: isOwn ? radius : 6,
+            bottomTrailingRadius: isOwn ? 6 : radius,
+            topTrailingRadius: radius,
             style: .continuous
         )
         .fill(isOwn

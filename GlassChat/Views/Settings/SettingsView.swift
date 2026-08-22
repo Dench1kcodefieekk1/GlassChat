@@ -1,44 +1,63 @@
 import SwiftUI
+import PhotosUI
 
 struct SettingsHomeView: View {
     @Environment(DataStore.self) private var store
     @AppStorage("isLoggedIn") private var isLoggedIn = false
     @State private var model = SettingsViewModel()
-    @State private var showEditProfile = false
+    @State private var showAddAccount = false
+    @State private var avatarPickerItem: PhotosPickerItem?
+
+    private var me: User { store.currentUser }
 
     var body: some View {
-        Form {
+        List {
+            profileCardSection
             accountSection
-            appearanceSection
-            chatsSection
-            notificationsSection
-            privacySection
-            dataSection
-            aboutSection
+            if !store.settings.linkedAccounts.isEmpty {
+                accountsSwitchSection
+            }
+            generalSection
+            otherSection
             logoutSection
         }
+        .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
+        .background(Color(uiColor: .systemGroupedBackground))
         .navigationTitle("Settings")
         .onChange(of: store.settings) {
             store.save()
         }
-        .sheet(isPresented: $showEditProfile) {
-            EditProfileView()
+        .sheet(isPresented: $showAddAccount) {
+            AddAccountSheet()
         }
-        .sheet(isPresented: $model.showLicenses) {
-            LicensesView(text: model.licensesText)
+        .onChange(of: avatarPickerItem) { _, item in
+            guard let item else { return }
+            Task {
+                if let data = try? await item.loadTransferable(type: Data.self),
+                   let image = UIImage(data: data) {
+                    setProfilePhoto(image)
+                }
+                avatarPickerItem = nil
+            }
         }
     }
 
-    // MARK: - Account
+    // MARK: - Profile card
 
-    private var accountSection: some View {
+    private var profileCardSection: some View {
         Section {
-            Button {
-                showEditProfile = true
+            NavigationLink {
+                UserProfileView()
             } label: {
                 HStack(spacing: 14) {
-                    let me = store.currentUser
-                    AvatarView(title: me.name, seed: me.id, size: 60)
+                    AvatarView(
+                        title: me.name,
+                        seed: me.id,
+                        size: 62,
+                        isOnline: true,
+                        fileName: me.avatarFileName
+                    )
                     VStack(alignment: .leading, spacing: 2) {
                         Text(me.name)
                             .font(.title3.weight(.semibold))
@@ -51,105 +70,152 @@ struct SettingsHomeView: View {
                             .foregroundStyle(.secondary)
                     }
                     Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.tertiary)
                 }
+                .padding(.vertical, 6)
+                .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Edit profile")
+            .listRowBackground(
+                Color(uiColor: .secondarySystemGroupedBackground).opacity(0.55)
+            )
+            .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 12))
         }
     }
 
-    // MARK: - Appearance
+    // MARK: - Account
 
-    private var appearanceSection: some View {
-        @Bindable var store = store
-        return Section("Appearance") {
-            Picker("Theme", selection: $store.settings.appearance) {
-                ForEach(AppearanceMode.allCases) { mode in
-                    Text(mode.label).tag(mode)
-                }
+    private var accountSection: some View {
+        Section("Account") {
+            NavigationLink {
+                UserProfileView()
+            } label: {
+                settingsIcon("person.crop.circle.fill", color: .accentColor)
+                Text("My Profile")
             }
-            .pickerStyle(.segmented)
 
-            HStack(spacing: 14) {
-                ForEach(AccentChoice.allCases) { choice in
-                    Button {
-                        store.settings.accent = choice
-                    } label: {
-                        Circle()
-                            .fill(choice.color)
-                            .frame(width: 32, height: 32)
-                            .overlay {
-                                if store.settings.accent == choice {
-                                    Image(systemName: "checkmark")
-                                        .font(.caption.weight(.bold))
-                                        .foregroundStyle(.white)
-                                }
-                            }
-                    }
-                    .accessibilityLabel(choice.label)
-                }
-                Spacer()
+            PhotosPicker(selection: $avatarPickerItem, matching: .images) {
+                settingsIcon("camera.fill", color: .blue)
+                Text("Change Photo")
             }
+            .foregroundStyle(.primary)
+
+            Button {
+                Haptics.light()
+                showAddAccount = true
+            } label: {
+                settingsIcon("person.badge.plus", color: .green)
+                Text("Add Account")
+            }
+            .foregroundStyle(.primary)
         }
     }
 
-    // MARK: - Chats
+    // MARK: - Account switching
 
-    private var chatsSection: some View {
-        @Bindable var store = store
-        return Section("Chats") {
-            Toggle("Send with Return", isOn: $store.settings.enterToSend)
-            Toggle("Message Previews", isOn: $store.settings.messagePreviews)
-            Toggle("Auto-Download Media", isOn: $store.settings.autoDownloadMedia)
-            Toggle("Save Incoming Media", isOn: $store.settings.saveIncomingMedia)
-        }
-    }
-
-    // MARK: - Notifications
-
-    private var notificationsSection: some View {
-        @Bindable var store = store
-        return Section("Notifications") {
-            Toggle("Messages", isOn: $store.settings.notifyMessages)
-            Toggle("Sounds", isOn: $store.settings.notifySounds)
-            Toggle("Message Preview", isOn: $store.settings.notifyPreview)
-            Toggle("Mentions", isOn: $store.settings.notifyMentions)
-        }
-        .onChange(of: store.settings.notifyMessages) { _, enabled in
-            if enabled {
-                Task {
-                    _ = await NotificationService.shared.requestAuthorization()
+    private var accountsSwitchSection: some View {
+        Section("Switch Account") {
+            Button {
+                switchAccount(to: User.currentID)
+            } label: {
+                accountRow(name: store.user(id: User.currentID)?.name ?? "Alex",
+                           phone: store.user(id: User.currentID)?.phone ?? "",
+                           isSelected: store.currentUserID == User.currentID)
+            }
+            ForEach(store.settings.linkedAccounts) { account in
+                Button {
+                    switchAccount(to: account.id)
+                } label: {
+                    accountRow(name: account.name, phone: account.phone,
+                               isSelected: store.currentUserID == account.id)
                 }
             }
         }
     }
 
-    // MARK: - Privacy
+    private func accountRow(name: String, phone: String, isSelected: Bool) -> some View {
+        HStack(spacing: 12) {
+            AvatarView(title: name, seed: name, size: 36)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(name)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.primary)
+                Text(phone)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+            if isSelected {
+                Image(systemName: "checkmark")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.tint)
+            }
+        }
+        .contentShape(Rectangle())
+    }
 
-    private var privacySection: some View {
-        @Bindable var store = store
-        return Section("Privacy") {
-            Toggle("Show Last Seen", isOn: $store.settings.showLastSeen)
-            Toggle("Show Profile Photo", isOn: $store.settings.showProfilePhoto)
-            Toggle("Read Receipts", isOn: $store.settings.readReceipts)
+    private func switchAccount(to userID: String) {
+        guard store.currentUserID != userID else { return }
+        Haptics.light()
+        store.currentUserID = userID
+        store.save()
+    }
+
+    // MARK: - General
+
+    private var generalSection: some View {
+        Section("General") {
+            NavigationLink {
+                NotificationSettingsView()
+            } label: {
+                settingsIcon("bell.badge.fill", color: .red)
+                Text("Notifications and Sounds")
+            }
+
+            NavigationLink {
+                PrivacySettingsView()
+            } label: {
+                settingsIcon("hand.raised.fill", color: .teal)
+                Text("Privacy")
+            }
+
+            NavigationLink {
+                SessionsSettingsView()
+            } label: {
+                settingsIcon("desktopcomputer", color: .indigo)
+                Text("Active Sessions")
+            }
+
+            NavigationLink {
+                AppearanceSettingsView()
+            } label: {
+                settingsIcon("paintbrush.fill", color: .purple)
+                Text("Appearance")
+            }
+
+            NavigationLink {
+                ChatSettingsView()
+            } label: {
+                settingsIcon("bubble.left.and.bubble.right.fill", color: .green)
+                Text("Chats")
+            }
         }
     }
 
-    // MARK: - Data
+    // MARK: - Other
 
-    private var dataSection: some View {
-        Section("Data and Storage") {
+    private var otherSection: some View {
+        Section("Other") {
             HStack {
-                Label("Storage Usage", systemImage: "externaldrive.fill")
+                settingsIcon("externaldrive.fill", color: .orange)
+                Text("Storage Usage")
                 Spacer()
                 Text(model.storageBytes, format: .byteCount(style: .file))
                     .foregroundStyle(.secondary)
             }
-            Button("Clear Cache", role: .destructive) {
+            Button {
                 model.showClearConfirmation = true
+            } label: {
+                settingsIcon("trash.fill", color: .red)
+                Text("Clear Cache")
             }
             .confirmationDialog("Clear cached media?", isPresented: $model.showClearConfirmation, titleVisibility: .visible) {
                 Button("Clear Cache", role: .destructive) {
@@ -158,39 +224,22 @@ struct SettingsHomeView: View {
             } message: {
                 Text("Previously sent photos and voice messages will no longer be available offline.")
             }
+
+            NavigationLink {
+                LanguageSettingsView()
+            } label: {
+                settingsIcon("globe", color: .blue)
+                Text("Language")
+            }
+
+            NavigationLink {
+                AboutSettingsView()
+            } label: {
+                settingsIcon("info.circle.fill", color: .gray)
+                Text("About")
+            }
         }
         .onAppear { model.refreshStorage() }
-    }
-
-    // MARK: - About
-
-    private var aboutSection: some View {
-        Section("About") {
-            HStack {
-                Text("Version")
-                Spacer()
-                Text("\(model.appVersion) (\(model.buildNumber))")
-                    .foregroundStyle(.secondary)
-            }
-            Button {
-                model.showLicenses = true
-            } label: {
-                HStack {
-                    Text("Licenses")
-                        .foregroundStyle(.primary)
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.tertiary)
-                }
-            }
-            HStack {
-                Text("Developer")
-                Spacer()
-                Text("GlassChat Team")
-                    .foregroundStyle(.secondary)
-            }
-        }
     }
 
     private var logoutSection: some View {
@@ -205,82 +254,166 @@ struct SettingsHomeView: View {
             .foregroundStyle(.red)
         }
     }
-}
 
-// MARK: - Edit profile
-
-struct EditProfileView: View {
-    @Environment(DataStore.self) private var store
-    @Environment(\.dismiss) private var dismiss
-
-    @State private var name: String
-    @State private var username: String
-    @State private var bio: String
-    @State private var phone: String
-
-    init() {
-        _name = State(initialValue: "")
-        _username = State(initialValue: "")
-        _bio = State(initialValue: "")
-        _phone = State(initialValue: "")
+    private func settingsIcon(_ symbol: String, color: Color) -> some View {
+        Image(systemName: symbol)
+            .font(.system(size: 14, weight: .medium))
+            .foregroundStyle(.white)
+            .frame(width: 29, height: 29)
+            .background(color.gradient, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+            .accessibilityHidden(true)
     }
 
+    private func setProfilePhoto(_ image: UIImage) {
+        Haptics.light()
+        let scaled = MediaService.downscale(image, maxDimension: 512)
+        guard let data = scaled.jpegData(compressionQuality: 0.85) else { return }
+        var user = me
+        if let old = user.avatarFileName {
+            MediaService.delete(old)
+        }
+        user.avatarFileName = MediaService.save(data, extension: "jpg")
+        store.users[user.id] = user
+        store.save()
+    }
+}
+
+// MARK: - Add account
+
+struct AddAccountSheet: View {
+    @Environment(DataStore.self) private var store
+    @Environment(\.dismiss) private var dismiss
+    @State private var path: [AuthStep] = []
+
     var body: some View {
-        NavigationStack {
-            Form {
-                Section {
-                    let me = store.currentUser
-                    AvatarView(title: name.isEmpty ? me.name : name, seed: me.id, size: 84)
-                        .frame(maxWidth: .infinity)
-                        .listRowBackground(Color.clear)
-                }
-                Section("Name") {
-                    TextField("Name", text: $name)
-                    TextField("Username", text: $username)
-                }
-                Section("Bio") {
-                    TextField("Bio", text: $bio, axis: .vertical)
-                        .lineLimit(2...4)
-                }
-                Section("Phone") {
-                    TextField("Phone", text: $phone)
-                        .keyboardType(.phonePad)
+        NavigationStack(path: $path) {
+            PhoneNumberView { fullNumber in
+                path.append(.otp(fullNumber))
+            }
+            .navigationDestination(for: AuthStep.self) { step in
+                if case .otp(let number) = step {
+                    OTPView(
+                        phoneNumber: number,
+                        onAuthenticated: {
+                            Haptics.success()
+                            addAccount(phone: number)
+                            dismiss()
+                        },
+                        onBack: {
+                            if !path.isEmpty { path.removeLast() }
+                        }
+                    )
                 }
             }
-            .navigationTitle("Edit Profile")
-            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
                 }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") { save() }
-                        .disabled(name.trimmed.isEmpty)
+            }
+        }
+    }
+
+    private func addAccount(phone: String) {
+        let id = "user-account-\(UUID().uuidString)"
+        let name = "Account \(phone)"
+        let user = User(
+            id: id,
+            name: name,
+            username: "user" + phone.filter(\.isNumber).suffix(6),
+            bio: "",
+            phone: phone
+        )
+        store.users[id] = user
+        store.settings.linkedAccounts.append(LinkedAccount(id: id, name: name, phone: phone))
+        store.currentUserID = id
+        store.save()
+    }
+}
+
+// MARK: - Language
+
+struct LanguageSettingsView: View {
+    @Environment(DataStore.self) private var store
+
+    var body: some View {
+        @Bindable var store = store
+        return List {
+            Section {
+                Picker("Language", selection: $store.settings.language) {
+                    ForEach(AppLanguage.allCases) { language in
+                        Text(language.label).tag(language)
+                    }
+                }
+                .pickerStyle(.inline)
+                .labelsHidden()
+            } footer: {
+                Text("GlassChat is a prototype and currently ships in English only. The choice is persisted and will apply once translations are added.")
+            }
+        }
+        .navigationTitle("Language")
+        .navigationBarTitleDisplayMode(.inline)
+        .autosaveSettings(store)
+    }
+}
+
+// MARK: - About
+
+struct AboutSettingsView: View {
+    @Environment(DataStore.self) private var store
+    @State private var model = SettingsViewModel()
+    @State private var showLicenses = false
+
+    var body: some View {
+        List {
+            Section {
+                HStack(spacing: 14) {
+                    Image(systemName: "bubble.left.and.bubble.right.fill")
+                        .font(.system(size: 26, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 56, height: 56)
+                        .background(
+                            LinearGradient(
+                                colors: [.accentColor, .accentColor.opacity(0.6)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            in: RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        )
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("GlassChat")
+                            .font(.headline)
+                        Text("Version \(model.appVersion) (\(model.buildNumber))")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .padding(.vertical, 4)
+            }
+            Section {
+                HStack {
+                    Text("Developer")
+                    Spacer()
+                    Text("GlassChat Team")
+                        .foregroundStyle(.secondary)
+                }
+                Button {
+                    showLicenses = true
+                } label: {
+                    Text("Licenses")
+                        .foregroundStyle(.primary)
                 }
             }
-            .onAppear(perform: loadIfNeeded)
+            Section {
+                Text("GlassChat is an original messenger prototype built with SwiftUI and iOS 26 Liquid Glass. It is not affiliated with Telegram or any other messaging service.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
         }
-        .presentationDetents([.large])
-    }
-
-    private func loadIfNeeded() {
-        guard name.isEmpty, username.isEmpty else { return }
-        let me = store.currentUser
-        name = me.name
-        username = me.username
-        bio = me.bio
-        phone = me.phone
-    }
-
-    private func save() {
-        var me = store.currentUser
-        me.name = name.trimmed
-        me.username = username.trimmed.lowercased()
-        me.bio = bio.trimmed
-        me.phone = phone.trimmed
-        store.users[me.id] = me
-        store.save()
-        dismiss()
+        .navigationTitle("About")
+        .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showLicenses) {
+            LicensesView(text: model.licensesText)
+        }
     }
 }
 
