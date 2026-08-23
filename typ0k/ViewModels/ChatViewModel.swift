@@ -62,19 +62,6 @@ final class ChatViewModel {
     private var replyTask: Task<Void, Never>?
     private var confettiTask: Task<Void, Never>?
 
-    static let cannedReplies = [
-        "Sounds good!",
-        "Haha, exactly 😄",
-        "Let me check and get back to you.",
-        "Perfect, thanks!",
-        "Can you send more details?",
-        "I'm in 👍",
-        "Interesting… tell me more.",
-        "Give me 5 minutes.",
-        "That works for me!",
-        "Awesome 🔥"
-    ]
-
     init(chatID: String, store: DataStore) {
         self.chatID = chatID
         self.store = store
@@ -431,8 +418,11 @@ final class ChatViewModel {
         pillFrame = rect
     }
 
-    // MARK: - Simulation
+    // MARK: - Delivery status
 
+    /// Local sending → sent → delivered progression only. Real replies arrive
+    /// through the Firestore snapshot listener — there is no simulated
+    /// auto-responder for 1-on-1 chats.
     private func simulateDeliveryAndReply(for message: Message) {
         replyTask?.cancel()
         replyTask = Task { [weak self] in
@@ -448,55 +438,10 @@ final class ChatViewModel {
             updated.status = .delivered
             self.store.updateMessage(updated)
 
-            // The Verification bot answers instead of the canned simulator.
+            // The in-app Verification bot keeps answering in its own chat.
             if self.isVerificationChat {
                 self.runBot(text: message.text, buttonAction: nil)
-                return
             }
-            if self.isSystemBotChat {
-                return
-            }
-
-            guard let chat = self.chat, chat.kind == .direct else { return }
-
-            try? await Task.sleep(for: .milliseconds(500))
-            guard !Task.isCancelled else { return }
-            self.store.setTyping(self.chatID, true)
-            try? await Task.sleep(for: .seconds(Double.random(in: 1.0...2.0)))
-            self.store.setTyping(self.chatID, false)
-            guard !Task.isCancelled else { return }
-
-            self.markOwnMessagesRead()
-
-            let replyText = Self.cannedReplies[Int.random(in: 0..<Self.cannedReplies.count)]
-            let senderID = chat.memberIDs.first { $0 != self.store.currentUserID } ?? self.store.currentUserID
-            let reply = Message(
-                id: "msg-\(UUID().uuidString)",
-                chatID: self.chatID,
-                senderID: senderID,
-                text: replyText,
-                createdAt: Date(),
-                status: .read
-            )
-            self.store.addMessage(reply)
-            self.scrollTrigger += 1
-
-            if self.store.activeChatID != self.chatID, !chat.isMuted, self.store.settings.notifyMessages {
-                NotificationService.shared.postIncoming(
-                    chatTitle: chat.title,
-                    text: replyText,
-                    settings: self.store.settings
-                )
-            }
-        }
-    }
-
-    private func markOwnMessagesRead() {
-        guard store.settings.readReceipts else { return }
-        for message in store.sortedMessages(for: chatID) where message.senderID == store.currentUserID && message.status != .read {
-            var updated = message
-            updated.status = .read
-            store.updateMessage(updated)
         }
     }
 }

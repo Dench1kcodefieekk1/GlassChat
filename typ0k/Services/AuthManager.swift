@@ -134,6 +134,23 @@ final class AuthManager {
         }
     }
 
+    /// Cleanly swaps the Firebase Auth session to the account behind
+    /// `phoneNumber` (multi-account switcher). The deterministic credential
+    /// is signed in if it exists, otherwise registered on the fly.
+    func switchSession(toPhone phoneNumber: String) async throws {
+        guard isFirebaseReady else { return }
+        let normalized = phoneNumber.filter(\.isNumber)
+        guard !normalized.isEmpty else { return }
+        try? Auth.auth().signOut()
+        let email = "\(normalized)@typ0k.app"
+        let password = "typ0k-otp-\(normalized)"
+        do {
+            try await signIn(email: email, password: password)
+        } catch {
+            try await createUser(email: email, password: password, displayName: nil, phone: phoneNumber)
+        }
+    }
+
     /// Persists the profile-setup answers onto `users/{uid}`: a required
     /// display name plus an optional username (Telegram-style — blank is
     /// allowed). Best-effort: failures only log.

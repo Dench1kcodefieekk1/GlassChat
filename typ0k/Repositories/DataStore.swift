@@ -390,6 +390,17 @@ final class DataStore {
         save()
     }
 
+    /// Wipes the local chat cache so the active account never sees another
+    /// account's dialogs, unread counters, or active conversation. Called on
+    /// startup (when a Firebase session exists) and on every account switch.
+    func clearAccountChats() {
+        chats.removeAll()
+        messages.removeAll()
+        typingChatIDs.removeAll()
+        activeChatID = nil
+        save()
+    }
+
     // MARK: - Search
 
     func searchMessages(_ query: String, limit: Int = 20) -> [Message] {

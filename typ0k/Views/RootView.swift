@@ -34,6 +34,9 @@ struct RootView: View {
             }
         }
         .task {
+            if AuthManager.shared.currentUID != nil {
+                store.clearAccountChats()
+            }
             ChatService.shared.startChatListListener()
         }
         .overlay {

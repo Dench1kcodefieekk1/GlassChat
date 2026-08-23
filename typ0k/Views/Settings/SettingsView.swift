@@ -156,6 +156,19 @@ struct SettingsHomeView: View {
         Haptics.light()
         store.currentUserID = userID
         store.save()
+        // Isolation: never carry the previous account's dialogs over.
+        store.clearAccountChats()
+        let phone = store.user(id: userID)?.phone ?? ""
+        guard !phone.isEmpty else { return }
+        Task {
+            do {
+                try await AuthManager.shared.switchSession(toPhone: phone)
+                store.updateCurrentUserPhone(phone)
+                ChatService.shared.refreshForAccountSwitch()
+            } catch {
+                print("[Auth] Account switch failed: \(error.localizedDescription)")
+            }
+        }
     }
 
     // MARK: - General

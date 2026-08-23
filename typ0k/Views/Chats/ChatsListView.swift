@@ -10,7 +10,7 @@ struct ChatsListView: View {
 
     var body: some View {
         Group {
-            if store.chats.isEmpty {
+            if chats.isEmpty && !isSearching {
                 emptyState
             } else if isSearching && chats.isEmpty && matches.isEmpty {
                 ContentUnavailableView.search(text: model.searchText)

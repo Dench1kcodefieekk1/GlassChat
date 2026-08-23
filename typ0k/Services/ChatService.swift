@@ -111,6 +111,15 @@ final class ChatService {
         chatListListener?.remove()
         chatListListener = nil
         listeningUID = nil
+        remoteChats = []
+    }
+
+    /// Rebinds the chat-list listener after an account switch so the query
+    /// runs against the newly signed-in UID.
+    func refreshForAccountSwitch() {
+        stopChatListListener()
+        stopMessageListener()
+        startChatListListener()
     }
 
     // MARK: - Active chat listener

@@ -140,7 +140,7 @@ struct IPadSplitNavigationContainer: View {
         .listStyle(.plain)
         .listRowSeparator(.hidden)
         .overlay {
-            if store.chats.isEmpty {
+            if chatsModel.visibleChats(in: store).isEmpty {
                 ContentUnavailableView {
                     Label("No chats yet", systemImage: "bubble.left.and.bubble.right")
                 } description: {
@@ -290,6 +290,8 @@ struct IPadDetailViewRouter: View {
                         destination(for: route)
                     }
             }
+            .navigationBarTitleDisplayMode(.inline)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .id(chatId)
 
         case .profile(let userId):
