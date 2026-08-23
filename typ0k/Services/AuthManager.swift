@@ -42,50 +42,68 @@ final class AuthManager {
     @discardableResult
     func createUser(email: String, password: String, displayName: String?, phone: String?) async throws -> String {
         guard isFirebaseReady else { throw AuthManagerError.firebaseNotConfigured }
-        let result = try await Auth.auth().createUser(withEmail: email, password: password)
-        let uid = result.user.uid
+        print("[Auth Debug] Registration attempt: \(email)")
 
-        var profile: [String: Any] = [
-            "uid": uid,
-            "email": email,
-            "createdAt": FieldValue.serverTimestamp(),
-        ]
-        if let displayName, !displayName.isEmpty { profile["displayName"] = displayName }
-        if let phone, !phone.isEmpty { profile["phone"] = phone }
+        // A previously active session on this device must never leak into a
+        // new account's registration — sign out explicitly first.
+        try? Auth.auth().signOut()
 
-        try await db.collection("users").document(uid).setData(profile, merge: true)
-        return uid
+        do {
+            let result = try await Auth.auth().createUser(withEmail: email, password: password)
+            let uid = result.user.uid
+
+            var profile: [String: Any] = [
+                "uid": uid,
+                "email": email,
+                "createdAt": FieldValue.serverTimestamp(),
+            ]
+            if let displayName, !displayName.isEmpty { profile["displayName"] = displayName }
+            if let phone, !phone.isEmpty { profile["phone"] = phone }
+
+            // Profile document syncs immediately so users/{uid} exists before
+            // the UI advances (allowed by the isOwner rule).
+            try await db.collection("users").document(uid).setData(profile, merge: true)
+            print("[Auth Debug] Registration success: uid=\(uid)")
+            return uid
+        } catch {
+            print("[Auth Debug] Registration error: \(error.localizedDescription)")
+            throw error
+        }
     }
 
     @discardableResult
     func signIn(email: String, password: String) async throws -> String {
         guard isFirebaseReady else { throw AuthManagerError.firebaseNotConfigured }
-        let result = try await Auth.auth().signIn(withEmail: email, password: password)
-        return result.user.uid
+        print("[Auth Debug] Sign-in attempt: \(email)")
+        do {
+            let result = try await Auth.auth().signIn(withEmail: email, password: password)
+            print("[Auth Debug] Sign-in success: uid=\(result.user.uid)")
+            return result.user.uid
+        } catch {
+            print("[Auth Debug] Sign-in error: \(error.localizedDescription)")
+            throw error
+        }
     }
 
     /// Bridges the phone-OTP prototype flow to Firebase Auth: the verified
     /// phone number is mapped to a deterministic credential, created on first
-    /// run and signed in afterwards. Never blocks the local login — failures
-    /// are logged and swallowed.
-    func authenticateVerifiedPhone(_ phoneNumber: String) async {
+    /// run and signed in afterwards. Throws when Firebase rejects the
+    /// registration so the calling UI can surface an alert and block
+    /// navigation; a missing Firebase config simply keeps local mode.
+    func authenticateVerifiedPhone(_ phoneNumber: String) async throws {
         guard isFirebaseReady else {
-            print("[Auth] Firebase not configured — staying in local mode.")
+            print("[Auth Debug] Firebase not configured — continuing in local mode.")
             return
         }
         let normalized = phoneNumber.filter(\.isNumber)
         let email = "\(normalized)@typ0k.app"
         let password = "typ0k-otp-\(normalized)"
         do {
-            let uid = try await signIn(email: email, password: password)
-            print("[Auth] Signed in existing user \(uid)")
+            try await signIn(email: email, password: password)
         } catch {
-            do {
-                let uid = try await createUser(email: email, password: password, displayName: nil, phone: phoneNumber)
-                print("[Auth] Created user document users/\(uid)")
-            } catch {
-                print("[Auth] Firebase auth unavailable: \(error.localizedDescription)")
-            }
+            // No account yet (or a legacy credential mismatch) — register.
+            // Any rejection here propagates to the UI.
+            try await createUser(email: email, password: password, displayName: nil, phone: phoneNumber)
         }
     }
 

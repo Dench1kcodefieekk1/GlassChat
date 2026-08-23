@@ -271,6 +271,8 @@ struct AddAccountSheet: View {
     @Environment(DataStore.self) private var store
     @Environment(\.dismiss) private var dismiss
     @State private var path: [AuthStep] = []
+    @State private var showAuthAlert = false
+    @State private var authErrorMessage = ""
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -283,8 +285,19 @@ struct AddAccountSheet: View {
                         phoneNumber: number,
                         onAuthenticated: {
                             Haptics.success()
-                            addAccount(phone: number)
-                            dismiss()
+                            // Secondary accounts go through the same Firebase
+                            // pipeline (previous session signs out inside
+                            // createUser). On rejection the account is not added.
+                            Task {
+                                do {
+                                    try await AuthManager.shared.authenticateVerifiedPhone(number)
+                                    addAccount(phone: number)
+                                    dismiss()
+                                } catch {
+                                    authErrorMessage = error.localizedDescription
+                                    showAuthAlert = true
+                                }
+                            }
                         },
                         onBack: {
                             if !path.isEmpty { path.removeLast() }
@@ -297,6 +310,11 @@ struct AddAccountSheet: View {
                     Button("Cancel") { dismiss() }
                 }
             }
+        }
+        .alert("Sign-in failed", isPresented: $showAuthAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(authErrorMessage)
         }
     }
 

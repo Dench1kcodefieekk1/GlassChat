@@ -9,6 +9,8 @@ struct AuthFlowView: View {
     @AppStorage("isLoggedIn") private var isLoggedIn = false
     @Environment(DataStore.self) private var store
     @State private var path: [AuthStep] = []
+    @State private var showAuthAlert = false
+    @State private var authErrorMessage = ""
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -32,10 +34,17 @@ struct AuthFlowView: View {
                             // directly to currentUser.phone.
                             store.updateCurrentUserPhone(number)
                             // Live Firebase pipeline: signs in (or registers and
-                            // provisions users/{uid}) with the verified number.
-                            // Fail-soft — the local session always completes.
-                            Task { await AuthManager.shared.authenticateVerifiedPhone(number) }
-                            isLoggedIn = true
+                            // provisions users/{uid}). On rejection the user is
+                            // NOT admitted — an alert explains the failure.
+                            Task {
+                                do {
+                                    try await AuthManager.shared.authenticateVerifiedPhone(number)
+                                    isLoggedIn = true
+                                } catch {
+                                    authErrorMessage = error.localizedDescription
+                                    showAuthAlert = true
+                                }
+                            }
                         },
                         onBack: {
                             if !path.isEmpty { path.removeLast() }
@@ -43,6 +52,11 @@ struct AuthFlowView: View {
                     )
                 }
             }
+        }
+        .alert("Sign-in failed", isPresented: $showAuthAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(authErrorMessage)
         }
     }
 }
