@@ -4,15 +4,15 @@ import XCTest
 @MainActor
 final class AvatarFrameManagerTests: XCTestCase {
     func testCatalogHasDistinctFramesIncludingPremium() {
-        XCTAssertEqual(AvatarFrameManager.catalog.count, 36)
-        XCTAssertEqual(Set(AvatarFrameManager.catalog.map(\.id)).count, 36)
+        XCTAssertEqual(AvatarFrameManager.catalog.count, 34)
+        XCTAssertEqual(Set(AvatarFrameManager.catalog.map(\.id)).count, 34)
     }
 
     func testStaticAndAnimatedTiers() {
         let staticFrames = AvatarFrameManager.catalog.filter { !$0.isAnimated }
         let animatedFrames = AvatarFrameManager.catalog.filter { $0.isAnimated }
         XCTAssertEqual(staticFrames.count, 10)
-        XCTAssertEqual(animatedFrames.count, 26)
+        XCTAssertEqual(animatedFrames.count, 24)
         XCTAssertTrue(staticFrames.allSatisfy { $0.requiredLevel >= 5 && $0.requiredLevel <= 40 })
         XCTAssertTrue(animatedFrames.allSatisfy { $0.requiredLevel >= 50 })
     }
@@ -21,7 +21,6 @@ final class AvatarFrameManagerTests: XCTestCase {
         XCTAssertEqual(AvatarFrameManager.frame(byID: "galaxyVortex")?.requiredLevel, 50)
         XCTAssertEqual(AvatarFrameManager.frame(byID: "solarFlare")?.requiredLevel, 50)
         XCTAssertEqual(AvatarFrameManager.frame(byID: "arcaneRune")?.requiredLevel, 50)
-        XCTAssertEqual(AvatarFrameManager.frame(byID: "angelicWings")?.requiredLevel, 100)
         XCTAssertEqual(AvatarFrameManager.frame(byID: "glitchMatrix")?.requiredLevel, 100)
         XCTAssertEqual(AvatarFrameManager.frame(byID: "glowingCrown")?.requiredLevel, 100)
     }

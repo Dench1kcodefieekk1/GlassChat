@@ -14,33 +14,14 @@ struct AnimatedAvatarView: View {
     var isOnline: Bool = false
     var frame: AvatarFrame?
 
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    /// Frame IDs whose effect renders as wings behind the avatar.
-    private var isWingsFrame: Bool {
-        frame?.id == "angelicWings" || frame?.id == "goldenElysiumWings"
-    }
-
     var body: some View {
         ZStack(alignment: .center) {
-            // LAYER 1: Background effects (wings, outer auras) behind the avatar.
-            if let frame, isWingsFrame, !reduceMotion {
-                TimelineView(.animation) { context in
-                    AngelWingsLayer(
-                        time: context.date.timeIntervalSinceReferenceDate,
-                        avatarSize: size,
-                        baseColor: frame.glowColors.first ?? .white,
-                        tipColor: frame.glowColors.count > 1 ? frame.glowColors[1] : .white
-                    )
-                }
-            }
-
-            // LAYER 2: Main avatar image, hard-masked to a circle.
+            // LAYER 1: Avatar image, hard-masked to a circle.
             avatarFace
 
-            // LAYER 3: Outer animated frame ring — always larger than the
-            // avatar (avatarSize + 18), never clipped across the face.
-            if let frame, !isWingsFrame {
+            // LAYER 2: Frame ring overlay positioned directly on the avatar
+            // edge (canvas = avatarSize + 4), hugging the perimeter.
+            if let frame {
                 AvatarFrameOverlayView(frame: frame, avatarSize: size) {
                     Color.clear.frame(width: size, height: size)
                 }
@@ -48,7 +29,7 @@ struct AnimatedAvatarView: View {
             }
         }
         // Fixed outer bounding box for consistent grid alignment.
-        .frame(width: size + 24, height: size + 24)
+        .frame(width: size + 8, height: size + 8)
     }
 
     /// The user image strictly clipped to a circle; the online badge is
@@ -112,7 +93,6 @@ struct PremiumFrameEffectLayer: View {
         case "phantomFlame":
             PhantomFlameLayer(frame: frame, size: size, time: time)
         default:
-            // goldenElysiumWings renders behind the avatar in AnimatedAvatarView.
             EmptyView()
         }
     }
@@ -128,9 +108,8 @@ struct GalaxyVortexLayer: View {
         Canvas { context, canvasSize in
             let center = CGPoint(x: (canvasSize.width / 2), y: (canvasSize.height / 2))
             let outer = min(canvasSize.width, canvasSize.height) / 2 - 2
-            // Inner band stays outside the avatar circle (avatar radius is
-            // ~0.81 * outer for the +18 ring padding).
-            let inner = outer * 0.85
+            // Canvas hugs the avatar (+4pt); keep the band on the perimeter.
+            let inner = outer * 0.95
 
             // Nebula annulus (three soft radial hues, slowly orbiting).
             for (index, color) in frame.glowColors.enumerated() {
@@ -186,8 +165,8 @@ struct SolarFlareLayer: View {
         Canvas { context, canvasSize in
             let center = CGPoint(x: (canvasSize.width / 2), y: (canvasSize.height / 2))
             let outer = min(canvasSize.width, canvasSize.height) / 2 - 2
-            // Inner band stays outside the avatar circle; flares launch outward.
-            let inner = outer * 0.85
+            // Canvas hugs the avatar (+4pt); flares launch from the perimeter.
+            let inner = outer * 0.95
 
             // Fire particles launching outward along the ring.
             for index in 0..<26 {
@@ -359,7 +338,7 @@ struct SupernovaBurstLayer: View {
         Canvas { context, canvasSize in
             let center = CGPoint(x: canvasSize.width / 2, y: canvasSize.height / 2)
             let outer = min(canvasSize.width, canvasSize.height) / 2 - 2
-            let inner = outer * 0.8
+            let inner = outer * 0.95
 
             for wave in 0..<3 {
                 let life = (time * 0.8 + Double(wave) / 3).truncatingRemainder(dividingBy: 1)
@@ -446,7 +425,7 @@ struct BloodMoonEclipseLayer: View {
         Canvas { context, canvasSize in
             let center = CGPoint(x: canvasSize.width / 2, y: canvasSize.height / 2)
             let outer = min(canvasSize.width, canvasSize.height) / 2 - 2
-            let inner = outer * 0.8
+            let inner = outer * 0.95
 
             let glow = Gradient(colors: [frame.glowColors[0].opacity(0.55), .clear])
             context.fill(
@@ -511,7 +490,7 @@ struct PlasmaVortexLayer: View {
         Canvas { context, canvasSize in
             let center = CGPoint(x: canvasSize.width / 2, y: canvasSize.height / 2)
             let outer = min(canvasSize.width, canvasSize.height) / 2 - 2
-            let inner = outer * 0.8
+            let inner = outer * 0.95
 
             for (index, color) in frame.glowColors.enumerated() {
                 let angle = time * 0.9 + Double(index) * (2 * .pi / Double(frame.glowColors.count))
@@ -611,75 +590,6 @@ struct PhantomFlameLayer: View {
             }
         }
         .frame(width: size, height: size)
-    }
-}
-
-/// ANGELIC WINGS — feathered light wings gently flapping behind the avatar.
-/// Wings span `avatarSize * 1.5`, extending to each side of the circle.
-struct AngelWingsLayer: View {
-    let time: TimeInterval
-    var avatarSize: CGFloat = 108
-    var baseColor: Color = .white
-    var tipColor: Color = Color(red: 0.85, green: 0.92, blue: 1.0)
-
-    var body: some View {
-        let flap = sin(time * 1.7)
-        let spread = avatarSize * 0.3
-        ZStack {
-            WingShape(side: .left)
-                .fill(
-                    LinearGradient(colors: [baseColor.opacity(0.75), tipColor.opacity(0.1)],
-                                   startPoint: .trailing, endPoint: .leading)
-                )
-                .blur(radius: 1.5)
-                .rotation3DEffect(.degrees(-12 - flap * 9), axis: (x: 0, y: 1, z: 0.15))
-                .offset(x: -spread, y: -avatarSize * 0.04)
-            WingShape(side: .right)
-                .fill(
-                    LinearGradient(colors: [baseColor.opacity(0.75), tipColor.opacity(0.1)],
-                                   startPoint: .leading, endPoint: .trailing)
-                )
-                .blur(radius: 1.5)
-                .rotation3DEffect(.degrees(12 + flap * 9), axis: (x: 0, y: 1, z: 0.15))
-                .offset(x: spread, y: -avatarSize * 0.04)
-        }
-        .frame(width: avatarSize * 1.5, height: avatarSize * 0.8)
-        .opacity(0.9)
-    }
-}
-
-/// One feathered wing built from layered arcs.
-struct WingShape: Shape {
-    enum Side { case left, right }
-
-    let side: Side
-
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        let origin = CGPoint(x: side == .left ? rect.maxX : rect.minX, y: rect.midY)
-        let length = rect.width
-        for feather in 0..<5 {
-            let progress = Double(feather) / 5
-            let featherLength = length * (1 - progress * 0.55)
-            let angle = (-55 + Double(feather) * 26) * (side == .left ? 1 : -1)
-            let radians = angle * .pi / 180
-            let end = CGPoint(
-                x: origin.x + cos(radians) * featherLength * (side == .left ? -1 : 1),
-                y: origin.y + sin(radians) * featherLength * 0.85
-            )
-            let control = CGPoint(
-                x: origin.x + (end.x - origin.x) * 0.45,
-                y: origin.y + (end.y - origin.y) * 0.45 - 14
-            )
-            path.move(to: origin)
-            path.addQuadCurve(to: end, control: control)
-            path.addQuadCurve(
-                to: origin,
-                control: CGPoint(x: (origin.x + end.x) / 2, y: max(origin.y, end.y) + 8)
-            )
-            path.closeSubpath()
-        }
-        return path
     }
 }
 

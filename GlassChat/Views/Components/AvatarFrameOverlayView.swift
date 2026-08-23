@@ -20,26 +20,23 @@ struct AvatarFrameOverlayView<Content: View>: View {
                 ring(for: frame)
                     // Circles are infinitely flexible shapes — without a hard
                     // bound the ring accepts the full proposed (screen) width.
-                    // +18 keeps the ring diameter strictly larger than the avatar.
-                    .frame(width: avatarSize + 18, height: avatarSize + 18)
+                    // +4 keeps the ring hugging the avatar perimeter directly.
+                    .frame(width: avatarSize + 4, height: avatarSize + 4)
             }
         }
         // Strictly bind the decoration container to the avatar bounds; never
         // expand to the surrounding layout.
-        .frame(width: avatarSize + 18, height: avatarSize + 18)
+        .frame(width: avatarSize + 4, height: avatarSize + 4)
     }
 
     @ViewBuilder
     private func ring(for frame: AvatarFrame) -> some View {
         if PremiumCosmeticsManager.premiumFrameIDs.contains(frame.id) {
-            if frame.id == "angelicWings" {
-                // Wings render behind the avatar inside AnimatedAvatarView.
-                EmptyView()
-            } else if !reduceMotion {
+            if !reduceMotion {
                 TimelineView(.animation) { context in
                     PremiumFrameEffectLayer(
                         frame: frame,
-                        size: avatarSize + 18,
+                        size: avatarSize + 4,
                         time: context.date.timeIntervalSinceReferenceDate
                     )
                 }
