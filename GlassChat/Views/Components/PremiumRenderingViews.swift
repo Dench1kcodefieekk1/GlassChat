@@ -21,13 +21,6 @@ struct AnimatedAvatarView: View {
         frame?.id == "angelicWings" || frame?.id == "goldenElysiumWings"
     }
 
-    /// Foreground particle rings that wrap the avatar edge: their canvas is
-    /// `size + 8`, giving the ring band a ~4pt overlap onto the image rim.
-    private static let edgeOverlapFrameIDs: Set<String> = [
-        "galaxyVortex", "solarFlare", "plasmaVortex",
-        "bloodMoonEclipse", "supernovaBurst"
-    ]
-
     var body: some View {
         ZStack(alignment: .center) {
             // LAYER 1: Background effects (wings, outer auras) behind the avatar.
@@ -45,22 +38,17 @@ struct AnimatedAvatarView: View {
             // LAYER 2: Main avatar image, hard-masked to a circle.
             avatarFace
 
-            // LAYER 3: Foreground ring & overlays (flames, galaxy border,
-            // crown) wrapping the avatar edge.
+            // LAYER 3: Outer animated frame ring — always larger than the
+            // avatar (avatarSize + 18), never clipped across the face.
             if let frame, !isWingsFrame {
-                AvatarFrameOverlayView(frame: frame, avatarSize: overlayAvatarSize(for: frame)) {
+                AvatarFrameOverlayView(frame: frame, avatarSize: size) {
                     Color.clear.frame(width: size, height: size)
                 }
+                .allowsHitTesting(false)
             }
         }
         // Fixed outer bounding box for consistent grid alignment.
         .frame(width: size + 24, height: size + 24)
-    }
-
-    /// The overlay's inner canvas size: edge-overlap frames render 4pt into
-    /// the avatar rim, all other rings keep a clean 6pt standoff.
-    private func overlayAvatarSize(for frame: AvatarFrame) -> CGFloat {
-        Self.edgeOverlapFrameIDs.contains(frame.id) ? size - 4 : size
     }
 
     /// The user image strictly clipped to a circle; the online badge is
@@ -140,7 +128,9 @@ struct GalaxyVortexLayer: View {
         Canvas { context, canvasSize in
             let center = CGPoint(x: (canvasSize.width / 2), y: (canvasSize.height / 2))
             let outer = min(canvasSize.width, canvasSize.height) / 2 - 2
-            let inner = outer * 0.78
+            // Inner band stays outside the avatar circle (avatar radius is
+            // ~0.81 * outer for the +18 ring padding).
+            let inner = outer * 0.85
 
             // Nebula annulus (three soft radial hues, slowly orbiting).
             for (index, color) in frame.glowColors.enumerated() {
@@ -177,10 +167,10 @@ struct GalaxyVortexLayer: View {
                 context.fill(Path(ellipseIn: rect), with: .color(.white))
             }
 
-            // Crisp inner rim.
+            // Crisp outer rim on the padding edge.
             context.opacity = 1
             let rim = CGRect(x: center.x - inner, y: center.y - inner, width: inner * 2, height: inner * 2)
-            context.stroke(Path(ellipseIn: rim), with: .color(frame.glowColors[1].opacity(0.8)), lineWidth: 1.5)
+            context.stroke(Path(ellipseIn: rim), with: .color(frame.glowColors[1].opacity(0.8)), lineWidth: 4)
         }
         .frame(width: size, height: size)
     }
@@ -196,7 +186,8 @@ struct SolarFlareLayer: View {
         Canvas { context, canvasSize in
             let center = CGPoint(x: (canvasSize.width / 2), y: (canvasSize.height / 2))
             let outer = min(canvasSize.width, canvasSize.height) / 2 - 2
-            let inner = outer * 0.82
+            // Inner band stays outside the avatar circle; flares launch outward.
+            let inner = outer * 0.85
 
             // Fire particles launching outward along the ring.
             for index in 0..<26 {
@@ -230,7 +221,7 @@ struct SolarFlareLayer: View {
                 Gradient(colors: frame.glowColors),
                 startPoint: CGPoint(x: center.x - inner, y: center.y),
                 endPoint: CGPoint(x: center.x + inner, y: center.y)
-            ), style: StrokeStyle(lineWidth: 2.5 + wobble * 0.4, lineCap: .round))
+            ), style: StrokeStyle(lineWidth: 4 + wobble * 0.4, lineCap: .round))
             context.opacity = 1
             context.stroke(Path(ellipseIn: rim), with: .color(frame.glowColors[0].opacity(0.35)), lineWidth: 1.2)
         }

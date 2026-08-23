@@ -20,12 +20,13 @@ struct AvatarFrameOverlayView<Content: View>: View {
                 ring(for: frame)
                     // Circles are infinitely flexible shapes — without a hard
                     // bound the ring accepts the full proposed (screen) width.
-                    .frame(width: avatarSize + 12, height: avatarSize + 12)
+                    // +18 keeps the ring diameter strictly larger than the avatar.
+                    .frame(width: avatarSize + 18, height: avatarSize + 18)
             }
         }
         // Strictly bind the decoration container to the avatar bounds; never
         // expand to the surrounding layout.
-        .frame(width: avatarSize + 12, height: avatarSize + 12)
+        .frame(width: avatarSize + 18, height: avatarSize + 18)
     }
 
     @ViewBuilder
@@ -38,7 +39,7 @@ struct AvatarFrameOverlayView<Content: View>: View {
                 TimelineView(.animation) { context in
                     PremiumFrameEffectLayer(
                         frame: frame,
-                        size: avatarSize + 12,
+                        size: avatarSize + 18,
                         time: context.date.timeIntervalSinceReferenceDate
                     )
                 }
