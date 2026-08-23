@@ -6,12 +6,24 @@ struct RootView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     var body: some View {
-        @Bindable var state = appState
         Group {
             if horizontalSizeClass == .regular {
                 IPadSplitNavigationContainer()
             } else {
-                compactTabs(state)
+                let bindableState = Bindable(appState)
+                TabView(selection: bindableState.selectedTab) {
+                    Tab("Chats", systemImage: "bubble.left.and.bubble.right.fill", value: .chats) {
+                        ChatsTabView()
+                            .badge(store.totalUnread)
+                    }
+                    Tab("Contacts", systemImage: "person.2.fill", value: .contacts) {
+                        ContactsTabView()
+                    }
+                    Tab("Settings", systemImage: "gearshape.fill", value: .settings) {
+                        SettingsTabView()
+                    }
+                }
+                .tabBarMinimizeBehavior(.onScrollDown)
             }
         }
         .overlay {
@@ -28,22 +40,6 @@ struct RootView: View {
         }
         .animation(.spring(response: 0.4, dampingFraction: 0.85),
                    value: LevelUpAudioNotifier.shared.celebrationLevel)
-    }
-
-    private func compactTabs(_ appState: Bindable<AppState>) -> some View {
-        TabView(selection: appState.selectedTab) {
-            Tab("Chats", systemImage: "bubble.left.and.bubble.right.fill", value: .chats) {
-                ChatsTabView()
-                    .badge(store.totalUnread)
-            }
-            Tab("Contacts", systemImage: "person.2.fill", value: .contacts) {
-                ContactsTabView()
-            }
-            Tab("Settings", systemImage: "gearshape.fill", value: .settings) {
-                SettingsTabView()
-            }
-        }
-        .tabBarMinimizeBehavior(.onScrollDown)
     }
 }
 
