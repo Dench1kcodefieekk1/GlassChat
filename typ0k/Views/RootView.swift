@@ -33,6 +33,9 @@ struct RootView: View {
                 appState.pendingOpenChatID = banner.chatID
             }
         }
+        .task {
+            ChatService.shared.startChatListListener()
+        }
         .overlay {
             if let level = LevelUpAudioNotifier.shared.celebrationLevel {
                 LevelUpCelebrationOverlay(level: level)
@@ -40,6 +43,17 @@ struct RootView: View {
         }
         .animation(.spring(response: 0.4, dampingFraction: 0.85),
                    value: LevelUpAudioNotifier.shared.celebrationLevel)
+        .alert(
+            "Sign-in failed",
+            isPresented: Binding(
+                get: { appState.backgroundAuthError != nil },
+                set: { if !$0 { appState.backgroundAuthError = nil } }
+            )
+        ) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(appState.backgroundAuthError ?? "")
+        }
     }
 }
 

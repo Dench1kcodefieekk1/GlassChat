@@ -21,6 +21,8 @@ struct ChatView: View {
             }
             .toolbar(.hidden, for: .navigationBar)
             .toolbar(.hidden, for: .tabBar)
+            .navigationBarBackButtonHidden(false)
+            .toolbarBackground(.visible, for: .navigationBar)
             .background(ChatWallpaperView(wallpaper: store.settings.wallpaper).ignoresSafeArea())
             .onTapGesture {
                 UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)

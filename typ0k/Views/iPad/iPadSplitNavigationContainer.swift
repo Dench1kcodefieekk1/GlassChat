@@ -25,8 +25,9 @@ struct IPadSplitNavigationContainer: View {
         }
         .navigationSplitViewStyle(.balanced)
         .sheet(isPresented: $chats.showCompose) {
-            ComposeView { userID in
-                appState.pendingOpenChatID = chats.startChat(with: userID, in: store)
+            ComposeView { chatID in
+                chats.showCompose = false
+                appState.pendingOpenChatID = chatID
             }
         }
         .onChange(of: appState.pendingOpenChatID) { _, chatID in

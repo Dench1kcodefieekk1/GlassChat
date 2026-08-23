@@ -292,6 +292,10 @@ struct AddAccountSheet: View {
                                 do {
                                     try await AuthManager.shared.authenticateVerifiedPhone(number)
                                     addAccount(phone: number)
+                                    await AuthManager.shared.syncSearchProfile(
+                                        username: store.currentUser.username,
+                                        displayName: store.currentUser.name
+                                    )
                                     dismiss()
                                 } catch {
                                     authErrorMessage = error.localizedDescription

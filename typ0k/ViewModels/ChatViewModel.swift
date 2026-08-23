@@ -153,6 +153,8 @@ final class ChatViewModel {
             }
         }
         store.markAllRead(chatID)
+        ChatService.shared.observeMessages(in: chatID)
+        Task { await ChatService.shared.markRead(chatID: chatID) }
     }
 
     func deactivate() {
@@ -164,6 +166,9 @@ final class ChatViewModel {
         store.setTyping(chatID, false)
         if store.activeChatID == chatID {
             store.activeChatID = nil
+        }
+        if ChatService.shared.activeChatID == chatID {
+            ChatService.shared.stopMessageListener()
         }
     }
 
@@ -194,6 +199,7 @@ final class ChatViewModel {
         draft = ""
         replyTo = nil
         store.addMessage(message)
+        Task { await ChatService.shared.mirrorLocalSend(text: text, chatID: chatID) }
         scrollTrigger += 1
         sendScrollTrigger += 1
         simulateDeliveryAndReply(for: message)

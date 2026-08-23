@@ -20,6 +20,9 @@ struct ChatsListView: View {
         }
         .navigationTitle("Chats")
         .searchable(text: $model.searchText, prompt: "Search chats and messages")
+        .task {
+            ChatService.shared.startChatListListener()
+        }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
@@ -31,8 +34,9 @@ struct ChatsListView: View {
             }
         }
         .sheet(isPresented: $model.showCompose) {
-            ComposeView { userID in
-                appState.pendingOpenChatID = model.startChat(with: userID, in: store)
+            ComposeView { chatID in
+                model.showCompose = false
+                appState.pendingOpenChatID = chatID
             }
         }
     }

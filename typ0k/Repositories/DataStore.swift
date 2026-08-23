@@ -352,6 +352,23 @@ final class DataStore {
         return chat
     }
 
+    /// Creates (or returns) a direct chat with a caller-supplied ID — used
+    /// for Firestore chats where the ID is the deterministic `uid1_uid2` pair.
+    func openDirectChat(id: String, with userID: String) -> Chat {
+        if let existing = chat(id: id) {
+            return existing
+        }
+        let chat = Chat(
+            id: id,
+            kind: .direct,
+            title: users[userID]?.name ?? "Chat",
+            memberIDs: [currentUserID, userID]
+        )
+        chats.append(chat)
+        save()
+        return chat
+    }
+
     /// Persists the phone number entered at registration onto the active
     /// session user; the profile binds directly to `currentUser.phone`.
     func updateCurrentUserPhone(_ number: String) {

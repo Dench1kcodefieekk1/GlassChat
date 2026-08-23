@@ -35,25 +35,34 @@ final class NavigationFlowTests: XCTestCase {
 
     // MARK: - Compose selection flow
 
-    func testStartChatDismissesComposeAndReportsChatID() {
+    func testCreateDirectChatContainsSelectedContact() {
         let store = makeStore()
-        let model = ChatsViewModel()
-        model.showCompose = true
 
-        let chatID = model.startChat(with: "user-sarah", in: store)
+        let chat = store.createDirectChat(with: "user-sarah")
 
-        XCTAssertFalse(model.showCompose, "selecting a contact must dismiss the compose sheet")
-        XCTAssertEqual(store.chat(id: chatID)?.memberIDs.contains("user-sarah"), true)
+        XCTAssertTrue(chat.memberIDs.contains("user-sarah"))
+        XCTAssertEqual(store.chat(id: chat.id)?.memberIDs.contains("user-sarah"), true)
     }
 
-    func testStartChatIsIdempotentPerContact() {
+    func testCreateDirectChatIsIdempotentPerContact() {
         let store = makeStore()
-        let model = ChatsViewModel()
 
-        let first = model.startChat(with: "user-john", in: store)
-        let second = model.startChat(with: "user-john", in: store)
+        let first = store.createDirectChat(with: "user-john")
+        let second = store.createDirectChat(with: "user-john")
 
-        XCTAssertEqual(first, second, "re-selecting a contact must reuse the existing direct chat")
+        XCTAssertEqual(first.id, second.id, "re-selecting a contact must reuse the existing direct chat")
+    }
+
+    func testOpenDirectChatReusesDeterministicID() {
+        let store = makeStore()
+        let chatID = ChatService.directChatID(between: "user-me", and: "user-sarah")
+
+        let first = store.openDirectChat(id: chatID, with: "user-sarah")
+        let second = store.openDirectChat(id: chatID, with: "user-sarah")
+
+        XCTAssertEqual(first.id, chatID)
+        XCTAssertEqual(first.id, second.id)
+        XCTAssertEqual(chatID, "user-me_user-sarah", "IDs must be sorted min_max")
     }
 
     // MARK: - Verification bot bootstrap

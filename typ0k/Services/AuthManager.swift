@@ -116,6 +116,28 @@ final class AuthManager {
         try await db.collection("users").document(uid).setData(fields, merge: true)
     }
 
+    /// Publishes the searchable username (`username` + lowercase
+    /// `usernameLower`) onto the caller's profile document so the global
+    /// @username search can find this user. Best-effort: failures only log.
+    func syncSearchProfile(username: String, displayName: String?) async {
+        guard isFirebaseReady, currentUID != nil else { return }
+        let trimmed = username.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        var fields: [String: Any] = [
+            "username": trimmed,
+            "usernameLower": trimmed.lowercased(),
+        ]
+        if let displayName, !displayName.isEmpty {
+            fields["displayName"] = displayName
+        }
+        do {
+            try await updateProfile(fields: fields)
+            print("[Auth] Synced searchable username @\(trimmed)")
+        } catch {
+            print("[Auth] Username sync failed: \(error.localizedDescription)")
+        }
+    }
+
     // MARK: - Sign out
 
     func signOut() {

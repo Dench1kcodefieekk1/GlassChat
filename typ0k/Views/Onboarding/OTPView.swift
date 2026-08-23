@@ -82,6 +82,8 @@ struct OTPView: View {
         .padding(.horizontal, 24)
         .navigationTitle("Verification")
         .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(false)
+        .toolbarBackground(.visible, for: .navigationBar)
         .onAppear { focused = true }
         .onReceive(timer) { _ in
             if resendSeconds > 0 { resendSeconds -= 1 }

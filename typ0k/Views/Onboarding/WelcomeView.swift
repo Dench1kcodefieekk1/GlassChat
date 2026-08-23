@@ -8,9 +8,8 @@ enum AuthStep: Hashable {
 struct AuthFlowView: View {
     @AppStorage("isLoggedIn") private var isLoggedIn = false
     @Environment(DataStore.self) private var store
+    @Environment(AppState.self) private var appState
     @State private var path: [AuthStep] = []
-    @State private var showAuthAlert = false
-    @State private var authErrorMessage = ""
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -33,16 +32,25 @@ struct AuthFlowView: View {
                             // active session user's phone — the profile binds
                             // directly to currentUser.phone.
                             store.updateCurrentUserPhone(number)
-                            // Live Firebase pipeline: signs in (or registers and
-                            // provisions users/{uid}). On rejection the user is
-                            // NOT admitted — an alert explains the failure.
-                            Task {
+                            // Enter the app instantly; Firebase auth keeps
+                            // running in the background so the UI never
+                            // freezes on network round-trips.
+                            isLoggedIn = true
+                            let username = store.currentUser.username
+                            let displayName = store.currentUser.name
+                            Task.detached(priority: .userInitiated) {
                                 do {
                                     try await AuthManager.shared.authenticateVerifiedPhone(number)
-                                    isLoggedIn = true
+                                    await AuthManager.shared.syncSearchProfile(
+                                        username: username,
+                                        displayName: displayName
+                                    )
+                                    await ChatService.shared.startChatListListener()
                                 } catch {
-                                    authErrorMessage = error.localizedDescription
-                                    showAuthAlert = true
+                                    print("[Auth] Background sync failed: \(error.localizedDescription)")
+                                    await MainActor.run {
+                                        appState.backgroundAuthError = error.localizedDescription
+                                    }
                                 }
                             }
                         },
@@ -52,11 +60,8 @@ struct AuthFlowView: View {
                     )
                 }
             }
-        }
-        .alert("Sign-in failed", isPresented: $showAuthAlert) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text(authErrorMessage)
+            .navigationBarBackButtonHidden(false)
+            .toolbarBackground(.visible, for: .navigationBar)
         }
     }
 }

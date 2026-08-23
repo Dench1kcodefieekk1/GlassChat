@@ -3,10 +3,20 @@ import SwiftUI
 struct PhoneNumberView: View {
     var onContinue: (String) -> Void
 
-    @State private var selectedCountry = CountryCode.all[0]
-    @State private var codeText = CountryCode.all[0].callingCode
+    static let anonymousCode = "+7777"
+    static let anonymousMessage =
+        "Anonymous numbers (+7777) cannot be registered. Please use a valid mobile phone number."
+
+    private static let defaultCountry =
+        CountryCode.country(regionCode: Locale.current.region?.identifier ?? "")
+        ?? CountryCode.country(regionCode: "UA")
+        ?? CountryCode.all[0]
+
+    @State private var selectedCountry = PhoneNumberView.defaultCountry
+    @State private var codeText = "+"
     @State private var phoneDisplay = ""
     @State private var showCountryPicker = false
+    @State private var showAnonymousAlert = false
     @FocusState private var focusedField: Field?
 
     private enum Field { case code, phone }
@@ -15,17 +25,31 @@ struct PhoneNumberView: View {
         phoneDisplay.filter(\.isNumber)
     }
 
+    private var normalizedCode: String {
+        codeText.hasPrefix("+") ? codeText : "+" + codeText
+    }
+
+    /// Full E.164-style digit string: calling code digits + national number.
+    private var fullDigits: String {
+        normalizedCode.dropFirst().filter(\.isNumber) + phoneDigits
+    }
+
+    private var isAnonymousNumber: Bool {
+        normalizedCode == Self.anonymousCode || fullDigits.hasPrefix("7777")
+    }
+
     private var isValid: Bool {
-        CountryCode.match(exact: codeText) != nil && phoneDigits.count >= 7
+        CountryCode.match(exact: normalizedCode) != nil
+            && phoneDigits.count >= 7
+            && !isAnonymousNumber
     }
 
     private var fullNumber: String {
-        let code = codeText.hasPrefix("+") ? codeText : "+" + codeText
-        return "\(code) \(phoneDisplay)"
+        "\(normalizedCode) \(phoneDisplay)"
     }
 
     var body: some View {
-        VStack(spacing: 24) {
+        VStack(spacing: 20) {
             VStack(spacing: 8) {
                 Text("Your Phone")
                     .font(.largeTitle.bold())
@@ -36,12 +60,21 @@ struct PhoneNumberView: View {
             }
             .padding(.top, 32)
 
+            countrySelector
+
             HStack(spacing: 10) {
                 codeField
-                    .frame(width: 138)
+                    .frame(width: 120)
                 phoneField
             }
-            .padding(.horizontal, 20)
+
+            if isAnonymousNumber {
+                Text(Self.anonymousMessage)
+                    .font(.footnote)
+                    .foregroundStyle(.red)
+                    .multilineTextAlignment(.center)
+                    .transition(.opacity)
+            }
 
             Button {
                 Haptics.medium()
@@ -54,19 +87,29 @@ struct PhoneNumberView: View {
             }
             .buttonStyle(.glassProminent)
             .disabled(!isValid)
-            .padding(.horizontal, 20)
 
             Spacer()
         }
+        .padding(.horizontal, 20)
         .navigationTitle("Sign In")
         .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(false)
+        .toolbarBackground(.visible, for: .navigationBar)
         .onAppear { focusedField = .code }
         .onChange(of: codeText) { _, newValue in
-            if let match = CountryCode.match(exact: newValue) {
+            var text = newValue
+            if !text.hasPrefix("+") { text = "+" + text.filter(\.isNumber) }
+            text = "+" + String(text.dropFirst().filter(\.isNumber).prefix(4))
+            if text != newValue { codeText = text; return }
+            // Live country resolution: the selector mirrors what is typed.
+            if let match = CountryCode.match(prefix: text) {
                 selectedCountry = match
-                if focusedField == .code {
-                    focusedField = .phone
-                }
+            }
+            if CountryCode.match(exact: text) != nil && focusedField == .code {
+                focusedField = .phone
+            }
+            if text == Self.anonymousCode {
+                showAnonymousAlert = true
             }
         }
         .onChange(of: phoneDisplay) { _, newValue in
@@ -83,27 +126,54 @@ struct PhoneNumberView: View {
                 focusedField = .phone
             }
         }
+        .alert("Number not allowed", isPresented: $showAnonymousAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(Self.anonymousMessage)
+        }
+        .animation(.easeInOut(duration: 0.2), value: isAnonymousNumber)
+    }
+
+    // MARK: - Fields
+
+    private var countrySelector: some View {
+        Button {
+            Haptics.selection()
+            showCountryPicker = true
+        } label: {
+            HStack(spacing: 10) {
+                Text(selectedCountry.flag)
+                    .font(.title2)
+                Text(selectedCountry.name)
+                    .font(.body.weight(.medium))
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+                Spacer()
+                Text(selectedCountry.callingCode)
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(fieldBackground)
+            .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Country: \(selectedCountry.name), calling code \(selectedCountry.callingCode)")
     }
 
     private var codeField: some View {
-        HStack(spacing: 6) {
-            Button {
-                Haptics.selection()
-                showCountryPicker = true
-            } label: {
-                Text(selectedCountry.flag)
-                    .font(.title3)
-            }
-            .accessibilityLabel("Choose country")
-
-            TextField("+380", text: $codeText)
-                .keyboardType(.phonePad)
-                .font(.body.weight(.medium))
-                .focused($focusedField, equals: .code)
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 12)
-        .background(fieldBackground)
+        TextField("+380", text: $codeText)
+            .keyboardType(.phonePad)
+            .font(.body.weight(.medium))
+            .focused($focusedField, equals: .code)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(fieldBackground)
+            .accessibilityLabel("Country calling code")
     }
 
     private var phoneField: some View {

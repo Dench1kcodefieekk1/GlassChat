@@ -38,6 +38,9 @@ final class AppState {
     var pendingOpenChatID: String? = nil
     /// Detail panel currently routed in the iPad split layout.
     var iPadDestination: IPadDetailDestination = .emptyState
+    /// Firebase sign-in failure from the background post-OTP sync, surfaced
+    /// as an alert once the user is already inside the app.
+    var backgroundAuthError: String? = nil
 }
 
 @MainActor
