@@ -6,12 +6,12 @@ struct RootView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     var body: some View {
-        @Bindable var appState = appState
+        @Bindable var state = appState
         Group {
             if horizontalSizeClass == .regular {
                 IPadSplitNavigationContainer()
             } else {
-                compactTabs(appState)
+                compactTabs(state)
             }
         }
         .overlay {

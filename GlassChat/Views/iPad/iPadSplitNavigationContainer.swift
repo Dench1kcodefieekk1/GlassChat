@@ -15,7 +15,7 @@ struct IPadSplitNavigationContainer: View {
     @State private var contactsModel = ContactsViewModel()
 
     var body: some View {
-        @Bindable var chatsModel = chatsModel
+        @Bindable var chats = chatsModel
 
         NavigationSplitView(columnVisibility: $columnVisibility) {
             sidebar
@@ -24,9 +24,9 @@ struct IPadSplitNavigationContainer: View {
             IPadDetailViewRouter()
         }
         .navigationSplitViewStyle(.balanced)
-        .sheet(isPresented: $chatsModel.showCompose) {
+        .sheet(isPresented: $chats.showCompose) {
             ComposeView { userID in
-                appState.pendingOpenChatID = chatsModel.startChat(with: userID, in: store)
+                appState.pendingOpenChatID = chats.startChat(with: userID, in: store)
             }
         }
         .onChange(of: appState.pendingOpenChatID) { _, chatID in

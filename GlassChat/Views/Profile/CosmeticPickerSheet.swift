@@ -30,7 +30,6 @@ struct CosmeticPickerSheet: View {
         }
         .background(Color(uiColor: .systemGroupedBackground))
         .presentationDetents([.large])
-        .presentationSizing(.formSheet)
     }
 
     // MARK: - Header
