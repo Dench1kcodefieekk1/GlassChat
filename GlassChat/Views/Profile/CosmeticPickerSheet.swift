@@ -92,6 +92,8 @@ struct CosmeticPickerSheet: View {
                     size: 68,
                     frame: frame
                 )
+                // Fixed centered bounds: wings/auras never distort card spacing.
+                .frame(width: 90, height: 90, alignment: .center)
                 // Locked designs stay inspectable — dimmed, never hidden.
                 .opacity(unlocked ? 1 : 0.5)
                 .overlay(alignment: .bottomTrailing) {

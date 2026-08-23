@@ -21,32 +21,46 @@ struct AnimatedAvatarView: View {
         frame?.id == "angelicWings" || frame?.id == "goldenElysiumWings"
     }
 
+    /// Foreground particle rings that wrap the avatar edge: their canvas is
+    /// `size + 8`, giving the ring band a ~4pt overlap onto the image rim.
+    private static let edgeOverlapFrameIDs: Set<String> = [
+        "galaxyVortex", "solarFlare", "plasmaVortex",
+        "bloodMoonEclipse", "supernovaBurst"
+    ]
+
     var body: some View {
-        ZStack {
-            // Layer 1 (deepest): wings radiate outward behind the avatar.
+        ZStack(alignment: .center) {
+            // LAYER 1: Background effects (wings, outer auras) behind the avatar.
             if let frame, isWingsFrame, !reduceMotion {
                 TimelineView(.animation) { context in
                     AngelWingsLayer(
                         time: context.date.timeIntervalSinceReferenceDate,
+                        avatarSize: size,
                         baseColor: frame.glowColors.first ?? .white,
                         tipColor: frame.glowColors.count > 1 ? frame.glowColors[1] : .white
                     )
                 }
             }
 
-            // Layer 2: rings, glows and particle canvases — strictly behind
-            // the avatar circle, so effects radiate from the border outward
-            // and can never cover the face.
+            // LAYER 2: Main avatar image, hard-masked to a circle.
+            avatarFace
+
+            // LAYER 3: Foreground ring & overlays (flames, galaxy border,
+            // crown) wrapping the avatar edge.
             if let frame, !isWingsFrame {
-                AvatarFrameOverlayView(frame: frame, avatarSize: size) {
+                AvatarFrameOverlayView(frame: frame, avatarSize: overlayAvatarSize(for: frame)) {
                     Color.clear.frame(width: size, height: size)
                 }
             }
-
-            // Layer 3 (topmost): the avatar itself, hard-masked to a circle.
-            avatarFace
         }
-        .frame(width: size + 16, height: size + 16)
+        // Fixed outer bounding box for consistent grid alignment.
+        .frame(width: size + 24, height: size + 24)
+    }
+
+    /// The overlay's inner canvas size: edge-overlap frames render 4pt into
+    /// the avatar rim, all other rings keep a clean 6pt standoff.
+    private func overlayAvatarSize(for frame: AvatarFrame) -> CGFloat {
+        Self.edgeOverlapFrameIDs.contains(frame.id) ? size - 4 : size
     }
 
     /// The user image strictly clipped to a circle; the online badge is
@@ -322,7 +336,7 @@ struct GlowingCrownLayer: View {
                 )
                 .frame(width: size * 0.34, height: size * 0.2)
                 .shadow(color: frame.glowColors[0].opacity(0.75), radius: 4)
-                .offset(y: -size / 2 - size * 0.1 + 2.5 * sin(time * 1.6))
+                .offset(y: -size / 2 - 4 + 2.5 * sin(time * 1.6))
 
             // Rising sparkle particles around the crown.
             Canvas { context, canvasSize in
@@ -610,13 +624,16 @@ struct PhantomFlameLayer: View {
 }
 
 /// ANGELIC WINGS — feathered light wings gently flapping behind the avatar.
+/// Wings span `avatarSize * 1.5`, extending to each side of the circle.
 struct AngelWingsLayer: View {
     let time: TimeInterval
+    var avatarSize: CGFloat = 108
     var baseColor: Color = .white
     var tipColor: Color = Color(red: 0.85, green: 0.92, blue: 1.0)
 
     var body: some View {
         let flap = sin(time * 1.7)
+        let spread = avatarSize * 0.3
         ZStack {
             WingShape(side: .left)
                 .fill(
@@ -625,7 +642,7 @@ struct AngelWingsLayer: View {
                 )
                 .blur(radius: 1.5)
                 .rotation3DEffect(.degrees(-12 - flap * 9), axis: (x: 0, y: 1, z: 0.15))
-                .offset(x: -30, y: -4)
+                .offset(x: -spread, y: -avatarSize * 0.04)
             WingShape(side: .right)
                 .fill(
                     LinearGradient(colors: [baseColor.opacity(0.75), tipColor.opacity(0.1)],
@@ -633,9 +650,9 @@ struct AngelWingsLayer: View {
                 )
                 .blur(radius: 1.5)
                 .rotation3DEffect(.degrees(12 + flap * 9), axis: (x: 0, y: 1, z: 0.15))
-                .offset(x: 30, y: -4)
+                .offset(x: spread, y: -avatarSize * 0.04)
         }
-        .frame(width: 130, height: 80)
+        .frame(width: avatarSize * 1.5, height: avatarSize * 0.8)
         .opacity(0.9)
     }
 }
