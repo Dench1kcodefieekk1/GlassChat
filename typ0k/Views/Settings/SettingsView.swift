@@ -245,6 +245,7 @@ struct SettingsHomeView: View {
         Section {
             Button {
                 Haptics.light()
+                AuthManager.shared.signOut()
                 isLoggedIn = false
             } label: {
                 Label("Log Out", systemImage: "rectangle.portrait.and.arrow.right")

@@ -31,6 +31,10 @@ struct AuthFlowView: View {
                             // active session user's phone — the profile binds
                             // directly to currentUser.phone.
                             store.updateCurrentUserPhone(number)
+                            // Live Firebase pipeline: signs in (or registers and
+                            // provisions users/{uid}) with the verified number.
+                            // Fail-soft — the local session always completes.
+                            Task { await AuthManager.shared.authenticateVerifiedPhone(number) }
                             isLoggedIn = true
                         },
                         onBack: {
