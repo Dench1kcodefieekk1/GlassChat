@@ -54,9 +54,18 @@ jobs:
 
       - name: Generate Xcode project
         run: |
-          xcodegen generate
+          set -o pipefail
+          xcodegen generate 2>&1 | tee xcodegen.log
           test -d "$PROJECT" || { echo "::error::$PROJECT was not generated"; exit 1; }
           echo "Generated $PROJECT"
+
+      - name: Upload XcodeGen log (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v5
+        with:
+          name: xcodegen-log
+          path: xcodegen.log
+          if-no-files-found: ignore
 
       # ------------------------------------------------------------------
       # Decide build mode: signed (secrets present) vs unsigned (CI smoke)
