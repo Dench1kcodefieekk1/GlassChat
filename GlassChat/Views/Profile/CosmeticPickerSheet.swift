@@ -105,7 +105,7 @@ struct CosmeticPickerSheet: View {
 
                 Text(frame.map { $0.isAnimated ? "Анимированная" : "Статичная" } ?? "Сбросить оформление")
                     .font(.system(size: 9))
-                    .foregroundStyle(frame?.isAnimated == true ? .tint : .secondary)
+                    .foregroundStyle(frame?.isAnimated == true ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
 
                 if let frame, !unlocked {
                     Text("🔒 Открывается на \(frame.requiredLevel) уровне")
@@ -173,7 +173,7 @@ struct CosmeticPickerSheet: View {
                 if unlocked {
                     Text(active ? "Активен" : "Выбрать")
                         .font(.system(size: 9))
-                        .foregroundStyle(active ? .tint : .secondary)
+                        .foregroundStyle(active ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
                 } else {
                     Text("🔒 Открывается на \(info.requiredLevel) уровне")
                         .font(.system(size: 8.5))

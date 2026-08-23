@@ -81,7 +81,7 @@ struct GalaxyVortexLayer: View {
 
     var body: some View {
         Canvas { context, canvasSize in
-            let center = CGPoint(x: canvasSize.midX, y: canvasSize.midY)
+            let center = CGPoint(x: (canvasSize.width / 2), y: (canvasSize.height / 2))
             let outer = min(canvasSize.width, canvasSize.height) / 2 - 2
             let inner = outer * 0.78
 
@@ -136,7 +136,7 @@ struct SolarFlareLayer: View {
 
     var body: some View {
         Canvas { context, canvasSize in
-            let center = CGPoint(x: canvasSize.midX, y: canvasSize.midY)
+            let center = CGPoint(x: (canvasSize.width / 2), y: (canvasSize.height / 2))
             let outer = min(canvasSize.width, canvasSize.height) / 2 - 2
             let inner = outer * 0.82
 
@@ -231,7 +231,7 @@ struct GlitchMatrixLayer: View {
 
             // Falling glyph band.
             Canvas { context, canvasSize in
-                let center = CGPoint(x: canvasSize.midX, y: canvasSize.midY)
+                let center = CGPoint(x: (canvasSize.width / 2), y: (canvasSize.height / 2))
                 let radius = min(canvasSize.width, canvasSize.height) / 2 - 4
                 for index in 0..<Self.glyphs.count {
                     let hash = abs(sin(Double(index) * 12.9898) * 43758.5453).truncatingRemainder(dividingBy: 1)
@@ -286,8 +286,8 @@ struct GlowingCrownLayer: View {
                     let hash = abs(sin(Double(index) * 12.9898) * 43758.5453).truncatingRemainder(dividingBy: 1)
                     let hash2 = abs(sin(Double(index) * 78.233) * 12543.19).truncatingRemainder(dividingBy: 1)
                     let life = (time * (0.5 + hash * 0.4) + hash2).truncatingRemainder(dividingBy: 1)
-                    let x = canvasSize.midX + (hash - 0.5) * size * 0.5
-                    let y = canvasSize.midY - size * 0.55 - life * size * 0.35
+                    let x = (canvasSize.width / 2) + (hash - 0.5) * size * 0.5
+                    let y = (canvasSize.height / 2) - size * 0.55 - life * size * 0.35
                     let sparkSize = (1 + hash2 * 1.6) * (1 - life)
                     let rect = CGRect(x: x - sparkSize, y: y - sparkSize,
                                       width: sparkSize * 2, height: sparkSize * 2)

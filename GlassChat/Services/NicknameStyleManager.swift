@@ -135,6 +135,9 @@ struct NicknameText: View {
                             : Self.animatedRainbow(at: time)
                     )
             }
+        default:
+            // Premium effects render via AnimatedNicknameView.
+            Text(name).font(font)
         }
     }
 
@@ -186,6 +189,22 @@ struct NicknameStyleSwatch: View {
                 Circle().fill(NicknameText.fireGradient)
             case .rainbow:
                 Circle().fill(NicknameText.staticRainbow)
+            case .burningText:
+                Circle().fill(LinearGradient(colors: [.yellow, .orange, .red],
+                                             startPoint: .bottom, endPoint: .top))
+            case .rainbowWave:
+                Circle().fill(NicknameText.staticRainbow)
+            case .staticGlitch:
+                Circle().fill(LinearGradient(colors: [Color.red, .cyan],
+                                             startPoint: .leading, endPoint: .trailing))
+            case .neonPulse:
+                Circle().fill(LinearGradient(colors: [Color.white, Color(red: 0.3, green: 0.5, blue: 1.0)],
+                                             startPoint: .top, endPoint: .bottom))
+            case .galaxyText:
+                Circle().fill(LinearGradient(colors: [Color(red: 0.15, green: 0.08, blue: 0.35),
+                                                      Color(red: 0.45, green: 0.2, blue: 0.85),
+                                                      Color(red: 0.15, green: 0.65, blue: 0.95)],
+                                             startPoint: .topLeading, endPoint: .bottomTrailing))
             }
             Text("A")
                 .font(.system(size: 11, weight: .heavy))
