@@ -158,8 +158,9 @@ final class ChatService {
 
     /// Atomically writes the message document and refreshes the parent chat
     /// document (participants, last message preview, per-recipient unread
-    /// counters) in a single batch commit.
-    func sendMessage(text: String, chatID: String, participants: [String]) async throws {
+    /// counters) in a single batch commit. The message document uses the
+    /// supplied ID so local and remote copies dedupe by ID.
+    func sendMessage(messageID: String, text: String, chatID: String, participants: [String]) async throws {
         guard isFirebaseReady else { throw FirestoreSyncError.notAuthenticated }
         guard let uid = currentUID else { throw FirestoreSyncError.notAuthenticated }
 
@@ -168,7 +169,7 @@ final class ChatService {
         let messageRef = db.collection("chats")
             .document(chatID)
             .collection("messages")
-            .document()
+            .document(messageID)
         batch.setData([
             "senderId": uid,
             "text": text,
@@ -190,13 +191,20 @@ final class ChatService {
     }
 
     /// Best-effort mirror of a locally sent message into Firestore. Only
-    /// deterministic `uid1_uid2` chats are synced; local demo chats stay local.
-    func mirrorLocalSend(text: String, chatID: String) async {
+    /// deterministic `uid1_uid2` chats are synced; local demo chats stay
+    /// local. The remote document reuses the local message ID so the
+    /// snapshot listener never renders the same send twice.
+    func mirrorLocalSend(message: Message, chatID: String) async {
         guard isFirebaseReady, currentUID != nil, chatID.contains("_") else { return }
         let participants = chatID.components(separatedBy: "_")
         guard participants.count == 2 else { return }
         do {
-            try await sendMessage(text: text, chatID: chatID, participants: participants)
+            try await sendMessage(
+                messageID: message.id,
+                text: message.text,
+                chatID: chatID,
+                participants: participants
+            )
         } catch {
             print("[ChatService] Mirror send failed: \(error.localizedDescription)")
         }

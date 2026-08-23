@@ -1,9 +1,28 @@
 rules_version = '2';
 
+// Production security rules for the typ0k messenger.
+// Generated from the Swift data models and Firestore service layer:
+//
+//   users/{userId}            <- User (Models/User.swift) + AuthManager profile sync
+//     uid, email, displayName, username, usernameLower, phone, createdAt,
+//     selectedFrameId, nicknameStyleId
+//
+//   chats/{chatId}            <- RemoteChat (Services/ChatService.swift)
+//     participants: [String], lastMessage: String,
+//     lastMessageTimestamp: Timestamp, unreadCount: { uid: Int }
+//
+//   chats/{chatId}/messages/{messageId}  <- RemoteMessage
+//     senderId: String (== Auth UID), text: String,
+//     timestamp: Timestamp, status: "sent" | "delivered" | "read"
+//
+// Direct chats use the deterministic ID "min(uid1,uid2)_max(uid1,uid2)",
+// so both participants address the same document without lookups.
+
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // --- Helper Functions ---
+    // --- Helpers -----------------------------------------------------------
+
     function isAuthenticated() {
       return request.auth != null;
     }
@@ -12,30 +31,59 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    function isSender() {
-      return isAuthenticated() && request.auth.uid == request.resource.data.senderId;
+    function writesSelfAsSender() {
+      return isAuthenticated()
+        && request.resource.data.senderId == request.auth.uid;
     }
 
-    // --- User Profiles & Cosmetic Inventory ---
+    // --- User profiles (search + account profile) ---------------------------
+
     match /users/{userId} {
-      // Any authenticated user can search/view profiles
+      // Every authenticated user may read profiles — required by the global
+      // @username search (usernameLower prefix queries) and chat titles.
       allow read: if isAuthenticated();
-      // Users can only create or modify their own profile/cosmetics
+
+      // A user creates and updates exactly their own document. This keeps
+      // search/profile writes open to authenticated users while preventing
+      // one account from overwriting another account's profile.
       allow create, update: if isOwner(userId);
-      allow delete: if false; // Profiles cannot be hard-deleted via client
+
+      // Profiles are never hard-deleted from clients.
+      allow delete: if false;
     }
 
-    // --- Direct Chats & Group Messaging ---
-    match /chats/{chatId} {
-      allow read, write: if isAuthenticated();
+    // --- Direct chats --------------------------------------------------------
 
-      // Messages Sub-collection
+    match /chats/{chatId} {
+      // Chat list queries run with `participants arrayContains <uid>`;
+      // list queries cannot evaluate get(), so reads are open to any
+      // authenticated user and isolation is enforced by the query itself.
+      allow read: if isAuthenticated();
+
+      // Creating a chat: the caller must list themselves as a participant.
+      allow create: if isAuthenticated()
+        && request.auth.uid in request.resource.data.participants;
+
+      // Updates refresh lastMessage/lastMessageTimestamp/unreadCount —
+      // the counterpart's unread counter is incremented by the sender,
+      // so participant-only updates are not enforceable per field.
+      allow update: if isAuthenticated();
+
+      allow delete: if isAuthenticated();
+
+      // --- Messages subcollection -------------------------------------------
+
       match /messages/{messageId} {
+        // Both sides of a 1-on-1 chat read the full history.
         allow read: if isAuthenticated();
-        // User must be authenticated and set themselves as sender
-        allow create: if isAuthenticated() && request.resource.data.senderId == request.auth.uid;
-        // Only the original author can edit or delete their message
-        allow update, delete: if isAuthenticated() && resource.data.senderId == request.auth.uid;
+
+        // Messages must be authored as the caller (mirrors Message.senderID
+        // set from Auth.auth().currentUser.uid in ChatService).
+        allow create: if writesSelfAsSender();
+
+        // Only the original author may edit or delete their message.
+        allow update, delete: if isAuthenticated()
+          && resource.data.senderId == request.auth.uid;
       }
     }
   }

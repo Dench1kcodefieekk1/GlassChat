@@ -73,6 +73,7 @@ struct ChatsTabView: View {
                     destination(for: route)
                 }
         }
+        .background(Color(uiColor: .systemBackground).ignoresSafeArea())
         .onChange(of: appState.pendingOpenChatID) { _, chatID in
             guard let chatID else { return }
             appState.pendingOpenChatID = nil

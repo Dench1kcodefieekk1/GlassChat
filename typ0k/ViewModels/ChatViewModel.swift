@@ -106,7 +106,7 @@ final class ChatViewModel {
     func rows() -> [ChatRowItem] {
         var items: [ChatRowItem] = []
         var lastDay = ""
-        for message in store.sortedMessages(for: chatID) {
+        for message in mergedMessages() {
             let day = message.createdAt.daySeparatorLabel
             if day != lastDay {
                 lastDay = day
@@ -121,6 +121,34 @@ final class ChatViewModel {
             items.append(ChatRowItem(id: "typing-indicator", kind: .typing))
         }
         return items
+    }
+
+    /// True for chats addressed by the deterministic `uid1_uid2` ID — those
+    /// are backed by Firestore and receive live snapshot updates.
+    var isFirestoreChat: Bool { chatID.contains("_") }
+
+    /// Local messages overlaid with the live Firestore snapshot stream.
+    /// Both copies of an outgoing message share one ID, so merging dedupes
+    /// automatically; incoming messages from the counterpart arrive here in
+    /// real time without any manual refresh.
+    func mergedMessages() -> [Message] {
+        let local = store.sortedMessages(for: chatID)
+        guard isFirestoreChat else { return local }
+        let remote = ChatService.shared.remoteMessages
+        guard !remote.isEmpty else { return local }
+
+        var byID: [String: Message] = Dictionary(uniqueKeysWithValues: local.map { ($0.id, $0) })
+        for entry in remote where byID[entry.id] == nil {
+            byID[entry.id] = Message(
+                id: entry.id,
+                chatID: chatID,
+                senderID: entry.senderId,
+                text: entry.text,
+                createdAt: entry.timestamp ?? Date(),
+                status: MessageStatus(rawValue: entry.status) ?? .sent
+            )
+        }
+        return byID.values.sorted { $0.createdAt < $1.createdAt }
     }
 
     func replyPreview(for message: Message) -> Message? {
@@ -186,7 +214,7 @@ final class ChatViewModel {
         draft = ""
         replyTo = nil
         store.addMessage(message)
-        Task { await ChatService.shared.mirrorLocalSend(text: text, chatID: chatID) }
+        Task { await ChatService.shared.mirrorLocalSend(message: message, chatID: chatID) }
         scrollTrigger += 1
         sendScrollTrigger += 1
         simulateDeliveryAndReply(for: message)

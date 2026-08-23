@@ -33,7 +33,7 @@ struct ChatView: View {
                 guard let pillID, verification.celebrationChatID == model.chatID else { return }
                 model.triggerConfetti(for: pillID)
             }
-            .onChange(of: store.sortedMessages(for: model.chatID).count) { oldValue, newValue in
+            .onChange(of: model.mergedMessages().count) { oldValue, newValue in
                 model.markReadIfActive()
                 // Auto-scroll to the newest message whenever one is appended
                 // (sent or received).

@@ -19,11 +19,12 @@ struct IPadSplitNavigationContainer: View {
 
         NavigationSplitView(columnVisibility: $columnVisibility) {
             sidebar
-                .navigationSplitViewColumnWidth(min: 320, ideal: 350, max: 380)
+                .navigationSplitViewColumnWidth(min: 320, ideal: 360, max: 400)
         } detail: {
             IPadDetailViewRouter()
         }
         .navigationSplitViewStyle(.balanced)
+        .background(Color(uiColor: .systemGroupedBackground).ignoresSafeArea())
         .animation(.easeInOut(duration: 0.25), value: appState.iPadDestination)
         .sheet(isPresented: $chats.showCompose) {
             ComposeView { chatID in
@@ -292,6 +293,7 @@ struct IPadDetailViewRouter: View {
             }
             .navigationBarTitleDisplayMode(.inline)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color(uiColor: .systemBackground).ignoresSafeArea())
             .id(chatId)
 
         case .profile(let userId):
