@@ -1,4 +1,5 @@
 import Foundation
+import FirebaseCore
 import FirebaseAuth
 import FirebaseFirestore
 
@@ -39,7 +40,7 @@ final class AuthManager {
     // MARK: - Registration & login
 
     @discardableResult
-    func createUser(email: String, password: String, displayName: String, phone: String?) async throws -> String {
+    func createUser(email: String, password: String, displayName: String?, phone: String?) async throws -> String {
         guard isFirebaseReady else { throw AuthManagerError.firebaseNotConfigured }
         let result = try await Auth.auth().createUser(withEmail: email, password: password)
         let uid = result.user.uid
