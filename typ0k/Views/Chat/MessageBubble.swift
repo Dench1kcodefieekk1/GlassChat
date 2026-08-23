@@ -115,12 +115,9 @@ struct MessageRow: View {
             if message.text.isEmojiOnly {
                 Text(message.text)
                     .font(.system(size: 44))
-            } else if let attributed = try? AttributedString(
-                markdown: message.text,
-                options: AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace)
-            ) {
-                Text(attributed)
             } else {
+                // Plain text only: the markdown AttributedString path rendered
+                // incoming Cyrillic text with abnormal letter spacing.
                 Text(message.text)
             }
         }
@@ -169,6 +166,9 @@ struct MessageRow: View {
             }
         }
         .foregroundStyle(isOwn ? AnyShapeStyle(.white.opacity(0.8)) : AnyShapeStyle(.secondary))
+        // Extra breathing room under media bubbles so the timestamp/checkmark
+        // row never crowds the attachment icon above it.
+        .padding(.top, message.attachments.isEmpty ? 0 : 2)
     }
 
     @ViewBuilder
@@ -425,12 +425,21 @@ struct FileBubble: View {
                     .foregroundStyle(isOwn ? AnyShapeStyle(.white.opacity(0.85)) : AnyShapeStyle(.secondary))
             }
 
-            ShareLink(item: fileURL) {
-                Image(systemName: "arrow.down.circle.fill")
+            if isOwn {
+                // Outgoing attachments are already stored locally — show a
+                // completion status instead of the incoming download arrow.
+                Image(systemName: "checkmark.circle.fill")
                     .font(.title3)
-                    .foregroundStyle(isOwn ? AnyShapeStyle(.white) : AnyShapeStyle(.tint))
+                    .foregroundStyle(.white.opacity(0.9))
+                    .accessibilityLabel("Sent")
+            } else {
+                ShareLink(item: fileURL) {
+                    Image(systemName: "arrow.down.circle.fill")
+                        .font(.title3)
+                        .foregroundStyle(AnyShapeStyle(.tint))
+                }
+                .accessibilityLabel("Download file")
             }
-            .accessibilityLabel("Download file")
         }
         .frame(maxWidth: 260, alignment: .leading)
     }

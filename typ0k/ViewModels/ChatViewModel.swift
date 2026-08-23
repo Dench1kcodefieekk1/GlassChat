@@ -70,9 +70,45 @@ final class ChatViewModel {
     // MARK: - Derived state
 
     var chat: Chat? { store.chat(id: chatID) }
-    var title: String { chat?.title ?? "" }
     var isGroup: Bool { chat?.kind == .group }
     var otherUser: User? { chat.flatMap { store.otherUser(in: $0) } }
+
+    /// Firestore profile of the counterpart, fetched on open when the chat
+    /// exists only remotely (no local `Chat` record).
+    var remoteProfile: RemoteUserProfile?
+    private var profileFetchStarted = false
+
+    /// The counterpart's Firebase UID for deterministic `uid1_uid2` chats.
+    var counterpartUID: String? {
+        guard chatID.contains("_"), let uid = AuthManager.shared.currentUID else { return nil }
+        let parts = chatID.components(separatedBy: "_")
+        guard parts.count == 2, parts.contains(uid) else { return nil }
+        return parts.first { $0 != uid }
+    }
+
+    /// Header title with fallbacks: local chat title → Firestore displayName
+    /// → @username → local user name/username/phone, never a blank bar.
+    var title: String {
+        if let chat, !chat.title.isEmpty, chat.title != "Chat" {
+            return chat.title
+        }
+        if let remoteProfile {
+            if !remoteProfile.displayName.isEmpty { return remoteProfile.displayName }
+            if !remoteProfile.username.isEmpty { return "@\(remoteProfile.username)" }
+        }
+        if let user = otherUser {
+            if !user.name.isEmpty { return user.name }
+            if !user.username.isEmpty { return "@\(user.username)" }
+            if !user.phone.isEmpty { return user.phone }
+        }
+        return chat?.title ?? "Chat"
+    }
+
+    /// Profile link target: local user first, then the remote counterpart UID.
+    var profileUserID: String? {
+        otherUser?.id ?? counterpartUID
+    }
+
     var isTyping: Bool { store.typingChatIDs.contains(chatID) }
     var isCameraAvailable: Bool { UIImagePickerController.isSourceTypeAvailable(.camera) }
     var isVerificationChat: Bool {
@@ -92,15 +128,16 @@ final class ChatViewModel {
     var subtitle: String {
         if isTyping { return "typing…" }
         if isGroup { return "\(chat?.memberIDs.count ?? 0) members" }
-        guard let user = otherUser else { return "" }
-        if user.isOnline { return "online" }
-        guard store.settings.showLastSeen else { return "" }
-        if let lastSeen = user.lastSeen { return lastSeen.lastSeenLabel }
-        return "last seen recently"
-    }
-
-    var profileUserID: String? {
-        otherUser?.id
+        if let user = otherUser {
+            if user.isOnline { return "online" }
+            guard store.settings.showLastSeen else { return "" }
+            if let lastSeen = user.lastSeen { return lastSeen.lastSeenLabel }
+            return "last seen recently"
+        }
+        if let remoteProfile, !remoteProfile.username.isEmpty {
+            return "@\(remoteProfile.username)"
+        }
+        return ""
     }
 
     func rows() -> [ChatRowItem] {
@@ -170,6 +207,20 @@ final class ChatViewModel {
         store.markAllRead(chatID)
         ChatService.shared.observeMessages(in: chatID)
         Task { await ChatService.shared.markRead(chatID: chatID) }
+        fetchRemoteProfileIfNeeded()
+    }
+
+    /// One-shot fetch of the counterpart's `users/{uid}` document so the
+    /// header shows their display name / @username even for chats that only
+    /// exist in Firestore.
+    private func fetchRemoteProfileIfNeeded() {
+        guard !profileFetchStarted, otherUser == nil, let uid = counterpartUID else { return }
+        profileFetchStarted = true
+        Task {
+            if let profile = await ChatService.shared.fetchUserProfile(uid: uid) {
+                remoteProfile = profile
+            }
+        }
     }
 
     func deactivate() {

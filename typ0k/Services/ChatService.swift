@@ -40,6 +40,12 @@ struct RemoteMessage: Identifiable, Hashable {
     }
 }
 
+/// Public profile fields read from `users/{uid}`.
+struct RemoteUserProfile: Hashable {
+    let displayName: String
+    let username: String
+}
+
 /// Real-time 1-on-1 messaging engine on Firestore.
 ///
 /// Schema (validated by `firestore.rules`):
@@ -216,5 +222,23 @@ final class ChatService {
         try? await db.collection("chats")
             .document(chatID)
             .setData(["unreadCount.\(uid)": 0], merge: true)
+    }
+
+    /// Reads the counterpart's public profile (`users/{uid}`) so chat headers
+    /// can show a display name / @username even when no local user record
+    /// exists for them yet.
+    func fetchUserProfile(uid: String) async -> RemoteUserProfile? {
+        guard isFirebaseReady else { return nil }
+        do {
+            let snapshot = try await db.collection("users").document(uid).getDocument()
+            guard let data = snapshot.data() else { return nil }
+            return RemoteUserProfile(
+                displayName: (data["displayName"] as? String) ?? "",
+                username: (data["username"] as? String) ?? ""
+            )
+        } catch {
+            print("[ChatService] Profile fetch failed for \(uid): \(error.localizedDescription)")
+            return nil
+        }
     }
 }
