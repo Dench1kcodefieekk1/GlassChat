@@ -1,6 +1,6 @@
 import XCTest
 import UIKit
-@testable import GlassChat
+@testable import typ0k
 
 @MainActor
 final class WalletManagerTests: XCTestCase {

@@ -1,5 +1,5 @@
 import XCTest
-@testable import GlassChat
+@testable import typ0k
 
 @MainActor
 final class NavigationFlowTests: XCTestCase {

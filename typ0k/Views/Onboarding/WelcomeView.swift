@@ -62,7 +62,7 @@ struct WelcomeView: View {
                     .opacity(appeared ? 1 : 0)
 
                 VStack(spacing: 10) {
-                    Text("GlassChat")
+                    Text("typ0k")
                         .font(.system(size: 40, weight: .bold, design: .rounded))
                         .foregroundStyle(.primary)
                     Text("Messaging, redesigned for iOS.")

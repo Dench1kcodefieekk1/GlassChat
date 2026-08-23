@@ -65,7 +65,7 @@ struct SessionsSettingsView: View {
                 terminate(session)
             }
         } message: { session in
-            Text("\(session.deviceName) will be signed out of GlassChat.")
+            Text("\(session.deviceName) will be signed out of typ0k.")
         }
         .confirmationDialog(
             "Terminate all other sessions?",

@@ -23,7 +23,7 @@ final class SettingsViewModel {
 
     var licensesText: String {
         """
-        GlassChat is built exclusively with Apple platforms frameworks:
+        typ0k is built exclusively with Apple platforms frameworks:
 
         • SwiftUI
         • Foundation
@@ -36,7 +36,7 @@ final class SettingsViewModel {
         No third-party libraries are used at runtime.
 
         The demo data, names, and conversations in this prototype are fictional \
-        and created for demonstration purposes only. GlassChat is not affiliated \
+        and created for demonstration purposes only. typ0k is not affiliated \
         with Telegram or any other messaging service.
         """
     }

@@ -181,7 +181,7 @@ struct DeviceSession: Codable, Identifiable, Equatable, Hashable {
                 id: "session-this",
                 deviceName: UIDevice.current.name,
                 systemName: "iOS 26",
-                appVersion: "GlassChat 0.1",
+                appVersion: "typ0k 0.1",
                 location: "Current location",
                 lastActive: "Online",
                 isCurrent: true
@@ -190,7 +190,7 @@ struct DeviceSession: Codable, Identifiable, Equatable, Hashable {
                 id: "session-pc",
                 deviceName: "Windows PC",
                 systemName: "Windows 11",
-                appVersion: "GlassChat Web 0.9",
+                appVersion: "typ0k Web 0.9",
                 location: "Berlin, Germany",
                 lastActive: "Last active today at 9:41",
                 isCurrent: false
@@ -199,7 +199,7 @@ struct DeviceSession: Codable, Identifiable, Equatable, Hashable {
                 id: "session-ipad",
                 deviceName: "iPad Pro",
                 systemName: "iPadOS 26",
-                appVersion: "GlassChat 0.1",
+                appVersion: "typ0k 0.1",
                 location: "Kyiv, Ukraine",
                 lastActive: "Last active yesterday",
                 isCurrent: false

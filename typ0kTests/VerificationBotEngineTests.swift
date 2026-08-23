@@ -1,5 +1,5 @@
 import XCTest
-@testable import GlassChat
+@testable import typ0k
 
 /// Reference-type clock so the engine's injected `now` advances in tests.
 @MainActor

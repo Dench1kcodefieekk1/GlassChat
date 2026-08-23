@@ -1,7 +1,7 @@
 import SwiftUI
 
 @main
-struct GlassChatApp: App {
+struct Typ0kApp: App {
     @AppStorage("isLoggedIn") private var isLoggedIn = false
     @State private var dependencies = AppDependencies()
 

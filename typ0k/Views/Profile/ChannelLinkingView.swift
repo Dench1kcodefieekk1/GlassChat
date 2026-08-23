@@ -5,7 +5,7 @@ struct ChannelLinkingView: View {
     @Environment(\.dismiss) private var dismiss
 
     static let demoChannels = [
-        "GlassChat News",
+        "typ0k News",
         "Design Digest",
         "iOS Dev Weekly",
         "Liquid Glass Lab"

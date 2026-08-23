@@ -24,16 +24,16 @@ jobs:
     name: Archive & Export IPA
     runs-on: ${{ github.event.inputs.runner || 'macos-26' }}
     env:
-      SCHEME: GlassChat
-      PROJECT: GlassChat.xcodeproj
-      BUNDLE_ID: com.glasschat.app
+      SCHEME: typ0k
+      PROJECT: typ0k.xcodeproj
+      BUNDLE_ID: com.typ0k.typ0kmessenger
     steps:
       - name: Checkout
         uses: actions/checkout@v5
 
       # ------------------------------------------------------------------
       # Toolchain: pick the newest Xcode installed on the runner, then
-      # install XcodeGen which generates GlassChat.xcodeproj from project.yml
+      # install XcodeGen which generates typ0k.xcodeproj from project.yml
       # ------------------------------------------------------------------
       - name: Select latest Xcode
         run: |
@@ -87,7 +87,7 @@ jobs:
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
         run: |
-          KEYCHAIN_PATH="$RUNNER_TEMP/glasschat-build.keychain-db"
+          KEYCHAIN_PATH="$RUNNER_TEMP/typ0k-build.keychain-db"
           security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
           security set-keychain-options -lut 21600 "$KEYCHAIN_PATH"
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
@@ -154,7 +154,7 @@ jobs:
             -scheme "$SCHEME" \
             -configuration Release \
             -destination 'generic/platform=iOS' \
-            -archivePath build/GlassChat.xcarchive \
+            -archivePath build/typ0k.xcarchive \
             DEVELOPMENT_TEAM="$TEAM_ID" \
             CODE_SIGN_STYLE=Manual \
             PROVISIONING_PROFILE_SPECIFIER="$PROVISIONING_PROFILE_NAME" \
@@ -165,7 +165,7 @@ jobs:
         run: |
           xcodebuild \
             -exportArchive \
-            -archivePath build/GlassChat.xcarchive \
+            -archivePath build/typ0k.xcarchive \
             -exportOptionsPlist build/ExportOptions.plist \
             -exportPath export
 
@@ -184,7 +184,7 @@ jobs:
             -scheme "$SCHEME" \
             -configuration Release \
             -destination 'generic/platform=iOS' \
-            -archivePath build/GlassChat.xcarchive \
+            -archivePath build/typ0k.xcarchive \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
@@ -194,9 +194,9 @@ jobs:
         if: steps.signing.outputs.available == 'false'
         run: |
           mkdir -p export/Payload
-          cp -R "build/GlassChat.xcarchive/Products/Applications/GlassChat.app" export/Payload/
+          cp -R "build/typ0k.xcarchive/Products/Applications/typ0k.app" export/Payload/
           cd export
-          zip -qry GlassChat.ipa Payload
+          zip -qry typ0k.ipa Payload
 
       - name: Extract build errors into summary
         if: failure()
@@ -253,27 +253,27 @@ jobs:
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v5
         with:
-          name: GlassChat-iOS
-          path: export/GlassChat.ipa
+          name: typ0k-iOS
+          path: export/typ0k.ipa
           if-no-files-found: error
 
       - name: Upload xcarchive (diagnostics)
         if: always()
         uses: actions/upload-artifact@v5
         with:
-          name: GlassChat-xcarchive
-          path: build/GlassChat.xcarchive
+          name: typ0k-xcarchive
+          path: build/typ0k.xcarchive
           if-no-files-found: ignore
 
       - name: Build summary
         if: always()
         run: |
           {
-            echo "## GlassChat build"
+            echo "## typ0k build"
             echo ""
             echo "- Mode: **${{ steps.signing.outputs.mode }}**"
             echo "- Scheme: \`$SCHEME\` (Release)"
-            echo "- Artifact: **GlassChat-iOS** → \`GlassChat.ipa\`"
+            echo "- Artifact: **typ0k-iOS** → \`typ0k.ipa\`"
             if [ "${{ steps.signing.outputs.available }}" = "false" ]; then
               echo ""
               echo "> Unsigned build: verifies compilation only. It cannot be installed on a physical iPhone."

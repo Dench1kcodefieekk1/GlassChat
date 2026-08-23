@@ -1,12 +1,12 @@
-# GlassChat
+# typ0k
 
 A modern iOS messenger prototype built with **SwiftUI** and **iOS 26 Liquid Glass**.
-GlassChat demonstrates the full happy path of a messaging app — chats, sending
+typ0k demonstrates the full happy path of a messaging app — chats, sending
 text/photo/voice messages, profiles, contacts, search, and settings — entirely
 offline, with an architecture designed so the local backend can later be swapped
 for a real one.
 
-> GlassChat is an original prototype. It is not affiliated with Telegram or any
+> typ0k is an original prototype. It is not affiliated with Telegram or any
 > other messaging service, and it uses no third-party assets.
 
 ---
@@ -22,7 +22,7 @@ Your Windows PC                GitHub                      GitHub Actions (macOS
 git push  ──────────────►  repository  ──── triggers ───►  1. XcodeGen generates .xcodeproj
                                                             2. Xcode 26 builds & archives
                                                             3. IPA is exported
-                        ◄──  artifact "GlassChat-iOS"  ───  4. artifact is uploaded
+                        ◄──  artifact "typ0k-iOS"  ───  4. artifact is uploaded
 download .ipa  ◄──────────
 ```
 
@@ -32,21 +32,21 @@ The pipeline inside `.github/workflows/build.yml`:
 | --- | --- |
 | 1 | `actions/checkout` fetches the repo on a `macos-26` runner |
 | 2 | The newest installed Xcode is selected via `xcode-select` |
-| 3 | `brew install xcodegen` then `xcodegen generate` creates `GlassChat.xcodeproj` from `project.yml` |
+| 3 | `brew install xcodegen` then `xcodegen generate` creates `typ0k.xcodeproj` from `project.yml` |
 | 4 | `xcodebuild archive` (Release, `generic/platform=iOS`) |
 | 5 | Signed: `xcodebuild -exportArchive` → real IPA. Unsigned: `.app` is zipped into `Payload/` → IPA |
-| 6 | `actions/upload-artifact` publishes **GlassChat-iOS** containing `GlassChat.ipa` |
+| 6 | `actions/upload-artifact` publishes **typ0k-iOS** containing `typ0k.ipa` |
 
 ---
 
 ## One-time setup from Windows
 
 1. Install [Git for Windows](https://git-scm.com/download/win) (also gives you Git Bash + `openssl`).
-2. Create an **empty** repository on GitHub (do **not** add a README there), e.g. `YOUR-NAME/GlassChat`.
+2. Create an **empty** repository on GitHub (do **not** add a README there), e.g. `YOUR-NAME/typ0k`.
 3. In this project folder, run in PowerShell or Git Bash:
 
 ```powershell
-git remote add origin https://github.com/YOUR-NAME/GlassChat.git
+git remote add origin https://github.com/YOUR-NAME/typ0k.git
 git push -u origin main
 ```
 
@@ -72,7 +72,7 @@ Either push a commit, or run it manually:
 
 ### Result
 
-- Artifact **`GlassChat-iOS`** → unzip → `GlassChat.ipa`.
+- Artifact **`typ0k-iOS`** → unzip → `typ0k.ipa`.
 - The build summary states `Mode: UNSIGNED_TEST`.
 
 ### Honest limitation
@@ -86,10 +86,10 @@ use Mode B.
 
 1. GitHub → repo → **Actions**
 2. Click the completed **"Build iOS"** run
-3. Scroll to **Artifacts** → click **GlassChat-iOS**
-4. Unzip the download; `GlassChat.ipa` is inside
+3. Scroll to **Artifacts** → click **typ0k-iOS**
+4. Unzip the download; `typ0k.ipa` is inside
 
-A second artifact, **`GlassChat-xcarchive`**, is uploaded for diagnostics
+A second artifact, **`typ0k-xcarchive`**, is uploaded for diagnostics
 (the full `.xcarchive` produced by `xcodebuild archive`).
 
 Artifacts are kept for 90 days by default.
@@ -98,7 +98,7 @@ Artifacts are kept for 90 days by default.
 
 ## Mode B — PHYSICAL IPHONE (signed Ad Hoc IPA)
 
-This produces a real, installable `GlassChat.ipa` signed with **your** Apple
+This produces a real, installable `typ0k.ipa` signed with **your** Apple
 Developer certificate. Everything below can be done from Windows.
 
 ### Prerequisites
@@ -121,8 +121,8 @@ Developer certificate. Everything below can be done from Windows.
 
 ### Step 3 — Register the App ID
 
-**Identifiers → +** → *App IDs* → *App* → Description `GlassChat`,
-Bundle ID **Explicit**: `com.glasschat.app`.
+**Identifiers → +** → *App IDs* → *App* → Description `typ0k`,
+Bundle ID **Explicit**: `com.typ0k.typ0kmessenger`.
 (This must match `BUNDLE_ID` in the workflow and `PRODUCT_BUNDLE_IDENTIFIER` in `project.yml` —
 if you change it, change all three.)
 
@@ -158,13 +158,13 @@ Keep `distribution_private.key` safe; you don't need it for CI.
 ### Step 5 — Create the Ad Hoc provisioning profile
 
 1. developer.apple.com → **Profiles → +** → *Distribution* → **Ad Hoc**.
-2. App ID: `com.glasschat.app`.
+2. App ID: `com.typ0k.typ0kmessenger`.
 3. Certificate: the **Apple Distribution** one from step 4.
 4. Devices: check your iPhone.
-5. **Name the profile exactly**, e.g. `GlassChat AdHoc` — this exact string becomes
+5. **Name the profile exactly**, e.g. `typ0k AdHoc` — this exact string becomes
    the `PROVISIONING_PROFILE_NAME` secret, so avoid characters you'd rather not
    paste into a secret value (plain words/spaces are fine).
-6. Download `GlassChat_AdHoc.mobileprovision`.
+6. Download `typ0k_AdHoc.mobileprovision`.
 
 > You don't put the profile anywhere yourself — the workflow decodes it from the
 > secret and installs it into the runner's
@@ -179,7 +179,7 @@ Base64-encode the two binary files in **PowerShell** (one line each, copied to c
 [Convert]::ToBase64String([IO.File]::ReadAllBytes("C:\path\to\APPLE_CERTIFICATE.p12")) | Set-Clipboard
 
 # provisioning profile
-[Convert]::ToBase64String([IO.File]::ReadAllBytes("C:\path\to\GlassChat_AdHoc.mobileprovision")) | Set-Clipboard
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("C:\path\to\typ0k_AdHoc.mobileprovision")) | Set-Clipboard
 ```
 
 Then in your repo: **Settings → Secrets and variables → Actions → New repository secret** — add all six:
@@ -188,9 +188,9 @@ Then in your repo: **Settings → Secrets and variables → Actions → New repo
 | --- | --- | --- | --- |
 | `APPLE_CERTIFICATE_BASE64` | Signing certificate + private key | Step 4: base64 of `APPLE_CERTIFICATE.p12` | Single-line base64 (PowerShell command above) |
 | `APPLE_CERTIFICATE_PASSWORD` | Password protecting the `.p12` | The export password you typed in step 4 | Plain text |
-| `KEYCHAIN_PASSWORD` | Throwaway password for the temporary CI keychain | Invent any string, e.g. `glasschat-ci-123` | Plain text |
+| `KEYCHAIN_PASSWORD` | Throwaway password for the temporary CI keychain | Invent any string, e.g. `typ0k-ci-123` | Plain text |
 | `PROVISIONING_PROFILE_BASE64` | The Ad Hoc profile | Step 5: base64 of the `.mobileprovision` | Single-line base64 |
-| `PROVISIONING_PROFILE_NAME` | Exact profile name from step 5 | e.g. `GlassChat AdHoc` | Plain text, must match 1:1 |
+| `PROVISIONING_PROFILE_NAME` | Exact profile name from step 5 | e.g. `typ0k AdHoc` | Plain text, must match 1:1 |
 | `TEAM_ID` | Your 10-character Team ID | developer.apple.com → Membership details | Plain text |
 
 ### Step 7 — Run the build
@@ -204,7 +204,7 @@ The workflow detects the secrets automatically and switches to the signed path
 An Ad Hoc IPA is already signed, but Windows has no Xcode to install it. Use a
 free sideloading tool:
 
-- **Sideloadly** (sideloadly.io) — pick `GlassChat.ipa`, your Apple ID, and the device.
+- **Sideloadly** (sideloadly.io) — pick `typ0k.ipa`, your Apple ID, and the device.
 - **AltServer / AltStore** (altstore.io) — Windows version installs signed IPAs too.
 
 Requirements: the iPhone must be the one whose UDID is inside the provisioning
@@ -221,7 +221,7 @@ an `itms-services://` link — useful for sharing with testers.)
 | Symptom | Cause / fix |
 | --- | --- |
 | `xcodegen: command not found` or brew failure | Transient runner/brew issue — re-run the workflow; the step installs XcodeGen fresh each time |
-| `No profiles for 'com.glasschat.app' were found` | `PROVISIONING_PROFILE_NAME` doesn't match the profile's real name, or the profile doesn't include the App ID/certificate |
+| `No profiles for 'com.typ0k.typ0kmessenger' were found` | `PROVISIONING_PROFILE_NAME` doesn't match the profile's real name, or the profile doesn't include the App ID/certificate |
 | `errSecInternalComponent` / codesign fails | Wrong `APPLE_CERTIFICATE_PASSWORD`, or the `.p12` base64 contains line breaks — re-copy with the PowerShell command |
 | `Provisioning profile ... doesn't include signing certificate` | Profile was created before/without the step-4 certificate — recreate the profile selecting that certificate |
 | Device won't install the IPA | Device UDID not registered in the profile, or profile expired |
@@ -271,7 +271,7 @@ Connect API key (`xcrun altool` / `xcrun notarytool`-style tooling or
 ## Architecture
 
 ```
-GlassChat/
+typ0k/
 ├── App/            App entry point, tabs/routes, dependency container
 ├── Models/         Codable domain models (User, Chat, Message, Attachment, Settings)
 ├── Repositories/   Repository protocols + DataStore (JSON persistence) + demo seeder

@@ -1,6 +1,6 @@
-name: GlassChat
+name: typ0k
 options:
-  bundleIdPrefix: com.glasschat
+  bundleIdPrefix: com.typ0k
   deploymentTarget:
     iOS: "26.0"
   createIntermediateGroups: true
@@ -13,38 +13,41 @@ settings:
     ENABLE_USER_SCRIPT_SANDBOXING: "YES"
     SWIFT_STRICT_CONCURRENCY: minimal
 targets:
-  GlassChat:
+  typ0k:
     type: application
     platform: iOS
     deploymentTarget: "26.0"
     sources:
       # Folder-based source: XcodeGen automatically includes every Swift file
-      # under GlassChat/ — including Services/AudioPlayerManager.swift (MusicManager),
+      # under typ0k/ — including Services/AudioPlayerManager.swift (MusicManager),
       # Services/WalletManager.swift, Views/Profile/ProfileMusicSection.swift,
       # Views/Chat/AudioMessageBubble.swift and Views/Chat/DocumentPicker.swift.
       # Covers all Views/, Models/, Services/, Repositories/, ViewModels/, App/, Theme/.
-      - path: GlassChat
+      # Drop GoogleService-Info.plist (Bundle ID com.typ0k.typ0kmessenger) into
+      # this folder before calling FirebaseApp.configure() — it is picked up as
+      # a build resource automatically.
+      - path: typ0k
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.glasschat.app
-        PRODUCT_NAME: GlassChat
+        PRODUCT_BUNDLE_IDENTIFIER: com.typ0k.typ0kmessenger
+        PRODUCT_NAME: typ0k
         MARKETING_VERSION: "0.1.0"
         CURRENT_PROJECT_VERSION: "1"
         GENERATE_INFOPLIST_FILE: "YES"
-        INFOPLIST_KEY_CFBundleDisplayName: GlassChat
+        INFOPLIST_KEY_CFBundleDisplayName: typ0k
         INFOPLIST_KEY_UILaunchScreen_Generation: "YES"
         INFOPLIST_KEY_UIUserInterfaceStyle: Automatic
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
-        INFOPLIST_KEY_NSMicrophoneUsageDescription: "GlassChat uses the microphone to record voice messages."
-        INFOPLIST_KEY_NSCameraUsageDescription: "GlassChat uses the camera to take photos you send in chats."
-        INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription: "GlassChat saves photos you choose to keep to your photo library."
+        INFOPLIST_KEY_NSMicrophoneUsageDescription: "typ0k uses the microphone to record voice messages."
+        INFOPLIST_KEY_NSCameraUsageDescription: "typ0k uses the camera to take photos you send in chats."
+        INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription: "typ0k saves photos you choose to keep to your photo library."
         CODE_SIGN_STYLE: Automatic
-  GlassChatTests:
+  typ0kTests:
     type: bundle.unit-test
     platform: iOS
     deploymentTarget: "26.0"
     sources:
-      - path: GlassChatTests
+      - path: typ0kTests
     dependencies:
-      - target: GlassChat
+      - target: typ0k

@@ -333,7 +333,7 @@ struct LanguageSettingsView: View {
                 .pickerStyle(.inline)
                 .labelsHidden()
             } footer: {
-                Text("GlassChat is a prototype and currently ships in English only. The choice is persisted and will apply once translations are added.")
+                Text("typ0k is a prototype and currently ships in English only. The choice is persisted and will apply once translations are added.")
             }
         }
         .navigationTitle("Language")
@@ -366,7 +366,7 @@ struct AboutSettingsView: View {
                             in: RoundedRectangle(cornerRadius: 14, style: .continuous)
                         )
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("GlassChat")
+                        Text("typ0k")
                             .font(.headline)
                         Text("Version \(model.appVersion) (\(model.buildNumber))")
                             .font(.caption)
@@ -379,7 +379,7 @@ struct AboutSettingsView: View {
                 HStack {
                     Text("Developer")
                     Spacer()
-                    Text("GlassChat Team")
+                    Text("typ0k Team")
                         .foregroundStyle(.secondary)
                 }
                 Button {
@@ -390,7 +390,7 @@ struct AboutSettingsView: View {
                 }
             }
             Section {
-                Text("GlassChat is an original messenger prototype built with SwiftUI and iOS 26 Liquid Glass. It is not affiliated with Telegram or any other messaging service.")
+                Text("typ0k is an original messenger prototype built with SwiftUI and iOS 26 Liquid Glass. It is not affiliated with Telegram or any other messaging service.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }

@@ -139,7 +139,7 @@ final class DataStore {
             name: "Wallet",
             username: "wallet",
             chatID: "chat-wallet",
-            intro: "Ваш кошелёк GlassChat. Откройте мини-приложение ниже, чтобы управлять балансом $TYP0K и USDT."
+            intro: "Ваш кошелёк typ0k. Откройте мини-приложение ниже, чтобы управлять балансом $TYP0K и USDT."
         )
     }
 
