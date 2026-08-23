@@ -104,12 +104,19 @@ final class UserLevelManager {
     }
 
     /// Daily login bonus: +500 XP on the first launch of the day.
+    /// The very first launch ever only records the login date without
+    /// awarding XP so new accounts start strictly at level 1.
     @discardableResult
     func registerDailyLoginBonus() -> Bool {
         if let lastLoginDate, Calendar.current.isDateInToday(lastLoginDate) {
             return false
         }
+        let isFirstLaunchEver = lastLoginDate == nil
         lastLoginDate = Date()
+        if isFirstLaunchEver {
+            persist()
+            return false
+        }
         addXP(Self.dailyLoginBonus)
         return true
     }

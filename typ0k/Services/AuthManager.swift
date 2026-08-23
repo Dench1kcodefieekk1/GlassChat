@@ -14,6 +14,15 @@ enum AuthManagerError: LocalizedError {
     }
 }
 
+/// Result of the phone-OTP Firebase handshake.
+enum AuthOutcome {
+    /// `users/{uid}` already carries a profile — go straight into the app.
+    case existingUser
+    /// Signed in but the profile document is missing a display name —
+    /// route the user through `ProfileSetupView` first.
+    case needsProfile
+}
+
 /// Live Firebase Authentication + Firestore profile binding.
 ///
 /// Registration (`createUser`) and login (`signIn`) talk directly to
@@ -87,23 +96,60 @@ final class AuthManager {
 
     /// Bridges the phone-OTP prototype flow to Firebase Auth: the verified
     /// phone number is mapped to a deterministic credential, created on first
-    /// run and signed in afterwards. Throws when Firebase rejects the
-    /// registration so the calling UI can surface an alert and block
-    /// navigation; a missing Firebase config simply keeps local mode.
-    func authenticateVerifiedPhone(_ phoneNumber: String) async throws {
+    /// run and signed in afterwards. Returns whether the account already has
+    /// a completed profile (`users/{uid}.displayName`) so the caller can
+    /// either enter the app instantly or route through profile setup.
+    /// Throws when Firebase rejects the registration so the calling UI can
+    /// surface an alert; a missing Firebase config keeps local mode.
+    @discardableResult
+    func authenticateVerifiedPhone(_ phoneNumber: String) async throws -> AuthOutcome {
         guard isFirebaseReady else {
             print("[Auth Debug] Firebase not configured — continuing in local mode.")
-            return
+            return .existingUser
         }
         let normalized = phoneNumber.filter(\.isNumber)
         let email = "\(normalized)@typ0k.app"
         let password = "typ0k-otp-\(normalized)"
         do {
             try await signIn(email: email, password: password)
+            return await profileIsComplete() ? .existingUser : .needsProfile
         } catch {
             // No account yet (or a legacy credential mismatch) — register.
             // Any rejection here propagates to the UI.
             try await createUser(email: email, password: password, displayName: nil, phone: phoneNumber)
+            return .needsProfile
+        }
+    }
+
+    /// True when `users/{uid}` exists and carries a non-empty `displayName`.
+    private func profileIsComplete() async -> Bool {
+        guard let uid = currentUID else { return false }
+        do {
+            let document = try await db.collection("users").document(uid).getDocument()
+            let displayName = document.data()?["displayName"] as? String ?? ""
+            return !displayName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        } catch {
+            print("[Auth Debug] Profile lookup failed: \(error.localizedDescription)")
+            return false
+        }
+    }
+
+    /// Persists the profile-setup answers onto `users/{uid}`: a required
+    /// display name plus an optional username (Telegram-style — blank is
+    /// allowed). Best-effort: failures only log.
+    func completeProfile(displayName: String, username: String?) async {
+        guard isFirebaseReady, currentUID != nil else { return }
+        var fields: [String: Any] = ["displayName": displayName]
+        if let username = username?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !username.isEmpty {
+            fields["username"] = username
+            fields["usernameLower"] = username.lowercased()
+        }
+        do {
+            try await updateProfile(fields: fields)
+            print("[Auth] Profile completed for users/\(currentUID ?? "?")")
+        } catch {
+            print("[Auth] Profile completion failed: \(error.localizedDescription)")
         }
     }
 

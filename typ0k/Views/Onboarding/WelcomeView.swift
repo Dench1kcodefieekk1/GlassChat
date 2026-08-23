@@ -3,6 +3,7 @@ import SwiftUI
 enum AuthStep: Hashable {
     case phone
     case otp(String)
+    case profileSetup
 }
 
 struct AuthFlowView: View {
@@ -32,25 +33,23 @@ struct AuthFlowView: View {
                             // active session user's phone — the profile binds
                             // directly to currentUser.phone.
                             store.updateCurrentUserPhone(number)
-                            // Enter the app instantly; Firebase auth keeps
-                            // running in the background so the UI never
-                            // freezes on network round-trips.
-                            isLoggedIn = true
-                            let username = store.currentUser.username
-                            let displayName = store.currentUser.name
-                            Task.detached(priority: .userInitiated) {
+                            Task {
                                 do {
-                                    try await AuthManager.shared.authenticateVerifiedPhone(number)
-                                    await AuthManager.shared.syncSearchProfile(
-                                        username: username,
-                                        displayName: displayName
-                                    )
-                                    await ChatService.shared.startChatListListener()
+                                    let outcome = try await AuthManager.shared
+                                        .authenticateVerifiedPhone(number)
+                                    switch outcome {
+                                    case .existingUser:
+                                        // Completed profile — straight in.
+                                        await ChatService.shared.startChatListListener()
+                                        withAnimation(.easeInOut(duration: 0.25)) {
+                                            isLoggedIn = true
+                                        }
+                                    case .needsProfile:
+                                        path.append(.profileSetup)
+                                    }
                                 } catch {
                                     print("[Auth] Background sync failed: \(error.localizedDescription)")
-                                    await MainActor.run {
-                                        appState.backgroundAuthError = error.localizedDescription
-                                    }
+                                    appState.backgroundAuthError = error.localizedDescription
                                 }
                             }
                         },
@@ -58,6 +57,22 @@ struct AuthFlowView: View {
                             if !path.isEmpty { path.removeLast() }
                         }
                     )
+                case .profileSetup:
+                    ProfileSetupView { displayName, username in
+                        store.updateCurrentProfile(name: displayName, username: username)
+                        // Enter instantly; the Firestore profile write keeps
+                        // running in the background.
+                        Task {
+                            await AuthManager.shared.completeProfile(
+                                displayName: displayName,
+                                username: username
+                            )
+                            await ChatService.shared.startChatListListener()
+                        }
+                        withAnimation(.easeInOut(duration: 0.25)) {
+                            isLoggedIn = true
+                        }
+                    }
                 }
             }
             .navigationBarBackButtonHidden(false)

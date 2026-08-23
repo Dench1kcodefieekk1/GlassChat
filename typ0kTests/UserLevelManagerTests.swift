@@ -55,13 +55,16 @@ final class UserLevelManagerTests: XCTestCase {
 
     func testDailyLoginBonusAwardsOncePerDay() {
         let manager = UserLevelManager(restoring: false)
-        XCTAssertTrue(manager.registerDailyLoginBonus())
-        XCTAssertEqual(manager.currentXP, 500)
+        // First-ever launch records the date but awards nothing so new
+        // accounts start strictly at level 1.
+        XCTAssertFalse(manager.registerDailyLoginBonus())
+        XCTAssertEqual(manager.currentXP, 0)
+        XCTAssertEqual(manager.currentLevel, 1)
         XCTAssertNotNil(manager.lastLoginDate)
 
         // Same-day launches never re-award.
         XCTAssertFalse(manager.registerDailyLoginBonus())
-        XCTAssertEqual(manager.currentXP, 500)
+        XCTAssertEqual(manager.currentXP, 0)
     }
 
     // MARK: - Level cap

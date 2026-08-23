@@ -32,11 +32,12 @@ struct ComposeView: View {
         return users.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
     }
 
-    /// Leading `@` is stripped so `@den` and `den` search identically.
+    /// Every `@` and surrounding whitespace is stripped so `@typ0k`,
+    /// `typ0k`, and `@ typ0k` all build the same clean query.
     private var normalizedQuery: String {
         searchText
-            .trimmingCharacters(in: CharacterSet(charactersIn: "@"))
-            .trimmingCharacters(in: .whitespaces)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "@", with: "")
             .lowercased()
     }
 
@@ -149,12 +150,12 @@ struct ComposeView: View {
     // MARK: - Remote username search
 
     /// Case-insensitive prefix search over `users.usernameLower`
-    /// (range query `>= prefix` and `< prefix + U+F8FF`).
+    /// (range query `>= prefix` and `<= prefix + U+F8FF`).
     private func runRemoteSearch(_ rawQuery: String) {
         searchTask?.cancel()
         let query = rawQuery
-            .trimmingCharacters(in: CharacterSet(charactersIn: "@"))
-            .trimmingCharacters(in: .whitespaces)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "@", with: "")
             .lowercased()
         guard !query.isEmpty else {
             remoteResults = []
@@ -171,7 +172,7 @@ struct ComposeView: View {
             do {
                 let snapshot = try await Firestore.firestore().collection("users")
                     .whereField("usernameLower", isGreaterThanOrEqualTo: query)
-                    .whereField("usernameLower", isLessThan: query + "\u{f8ff}")
+                    .whereField("usernameLower", isLessThanOrEqualTo: query + "\u{f8ff}")
                     .limit(to: 20)
                     .getDocuments()
                 let results = snapshot.documents.compactMap { doc -> RemoteUserResult? in

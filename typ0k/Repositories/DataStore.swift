@@ -378,6 +378,18 @@ final class DataStore {
         save()
     }
 
+    /// Persists the profile-setup answers: a required display name plus an
+    /// optional username (blank keeps the generated default).
+    func updateCurrentProfile(name: String, username: String?) {
+        guard var user = users[currentUserID] else { return }
+        user.name = name
+        if let username, !username.isEmpty {
+            user.username = username
+        }
+        users[currentUserID] = user
+        save()
+    }
+
     // MARK: - Search
 
     func searchMessages(_ query: String, limit: Int = 20) -> [Message] {

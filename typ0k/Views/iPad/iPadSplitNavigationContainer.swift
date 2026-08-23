@@ -24,10 +24,19 @@ struct IPadSplitNavigationContainer: View {
             IPadDetailViewRouter()
         }
         .navigationSplitViewStyle(.balanced)
+        .animation(.easeInOut(duration: 0.25), value: appState.iPadDestination)
         .sheet(isPresented: $chats.showCompose) {
             ComposeView { chatID in
                 chats.showCompose = false
                 appState.pendingOpenChatID = chatID
+            }
+        }
+        .onChange(of: sidebarSection) { _, section in
+            // The segmented picker is the sole Settings entry point on iPad;
+            // selecting it routes the detail column to the settings pane.
+            if section == .settings, case .settings = appState.iPadDestination {
+            } else if section == .settings {
+                appState.iPadDestination = .settings(section: nil)
             }
         }
         .onChange(of: appState.pendingOpenChatID) { _, chatID in
@@ -117,15 +126,6 @@ struct IPadSplitNavigationContainer: View {
                     .keyboardShortcut("f", modifiers: .command)
                     .accessibilityLabel("Search")
                 }
-                ToolbarItem(placement: .primaryAction) {
-                    Button {
-                        showSettings()
-                    } label: {
-                        Image(systemName: "gearshape")
-                    }
-                    .keyboardShortcut(",", modifiers: .command)
-                    .accessibilityLabel("Settings")
-                }
             }
         }
     }
@@ -174,30 +174,23 @@ struct IPadSplitNavigationContainer: View {
         }
     }
 
+    /// Pure navigation pane — the detail column already renders the full
+    /// settings list, so only deep links live here (no duplicated headers).
     private var settingsSidebar: some View {
         List {
-            Section {
-                Button {
-                    appState.iPadDestination = .settings(section: nil)
-                } label: {
-                    Label("Settings", systemImage: "gearshape.fill")
-                }
-                .foregroundStyle(.primary)
-
-                Button {
-                    appState.iPadDestination = .appearance(cosmeticsSheet: true)
-                } label: {
-                    Label("Appearance", systemImage: "paintpalette.fill")
-                }
-                .foregroundStyle(.primary)
-
-                Button {
-                    appState.iPadDestination = .profile(userId: store.currentUserID)
-                } label: {
-                    Label("My Profile", systemImage: "person.crop.circle.fill")
-                }
-                .foregroundStyle(.primary)
+            Button {
+                appState.iPadDestination = .appearance(cosmeticsSheet: true)
+            } label: {
+                Label("Appearance", systemImage: "paintpalette.fill")
             }
+            .foregroundStyle(.primary)
+
+            Button {
+                appState.iPadDestination = .profile(userId: store.currentUserID)
+            } label: {
+                Label("My Profile", systemImage: "person.crop.circle.fill")
+            }
+            .foregroundStyle(.primary)
         }
     }
 
@@ -255,12 +248,6 @@ struct IPadSplitNavigationContainer: View {
         if appState.iPadDestination != .chat(chatId: chatID) {
             appState.iPadDestination = .chat(chatId: chatID)
         }
-    }
-
-    private func showSettings() {
-        sidebarSection = .settings
-        selection = nil
-        appState.iPadDestination = .settings(section: nil)
     }
 
     /// Keeps the sidebar section/selection highlight in sync when the detail

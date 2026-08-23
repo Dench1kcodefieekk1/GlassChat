@@ -27,10 +27,13 @@ struct Typ0kApp: App {
             Group {
                 if isLoggedIn {
                     RootView()
+                        .transition(.opacity.combined(with: .scale(scale: 0.97)))
                 } else {
                     AuthFlowView()
+                        .transition(.opacity)
                 }
             }
+            .animation(.easeInOut(duration: 0.25), value: isLoggedIn)
             .environment(dependencies.store)
             .environment(dependencies.appState)
             .tint(dependencies.store.settings.accent.color)

@@ -75,7 +75,7 @@ struct MessageComposer: View {
     // MARK: - Input field
 
     private var inputField: some View {
-        HStack(alignment: .bottom, spacing: 4) {
+        HStack(alignment: .center, spacing: 4) {
             TextField("Message", text: $model.draft, axis: .vertical)
                 .lineLimit(1...5)
                 .focused($focused)
@@ -99,9 +99,10 @@ struct MessageComposer: View {
             .buttonStyle(PressScaleButtonStyle(scale: 0.85))
             .accessibilityLabel("Emoji")
         }
+        .frame(minHeight: 44)
         .padding(.leading, 15)
         .padding(.trailing, 8)
-        .padding(.vertical, 7)
+        .padding(.vertical, 4)
         .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 23, style: .continuous))
     }
 
