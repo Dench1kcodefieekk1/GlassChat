@@ -4,7 +4,7 @@ import FirebaseCore
 final class FirebaseAppDelegate: NSObject, UIApplicationDelegate {
     func application(_ application: UIApplication,
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
-        if FirebaseApp.isConfigurationAvailable {
+        if Bundle.main.path(forResource: "GoogleService-Info", ofType: "plist") != nil {
             FirebaseApp.configure()
         } else {
             print("Firebase: GoogleService-Info.plist is missing or invalid — skipping configuration.")
