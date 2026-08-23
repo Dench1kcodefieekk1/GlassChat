@@ -27,10 +27,12 @@ targets:
       # Services/WalletManager.swift, Views/Profile/ProfileMusicSection.swift,
       # Views/Chat/AudioMessageBubble.swift and Views/Chat/DocumentPicker.swift.
       # Covers all Views/, Models/, Services/, Repositories/, ViewModels/, App/, Theme/.
-      # GoogleService-Info.plist (Bundle ID com.typ0k.typ0kmessenger) lives in this
-      # folder and is bundled as a resource automatically; replace the placeholder
-      # values with a real Firebase project config to go live.
+      # The real Firebase config lives at the repo root and is embedded into the
+      # app bundle as a resource (Bundle ID com.typ0k.typ0kmessenger), so
+      # FirebaseApp.configure() resolves it via Bundle.main at launch.
       - path: typ0k
+      - path: GoogleService-Info.plist
+        buildPhase: resources
     dependencies:
       - package: firebase
         product: FirebaseCore
