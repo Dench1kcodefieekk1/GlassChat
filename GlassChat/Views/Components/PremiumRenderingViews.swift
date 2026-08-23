@@ -94,9 +94,10 @@ struct GalaxyVortexLayer: View {
                 )
                 let rect = CGRect(x: nebulaCenter.x - outer, y: nebulaCenter.y - outer,
                                   width: outer * 2, height: outer * 2)
+                let nebula = Gradient(colors: [color.opacity(0.35), .clear])
                 context.fill(
                     Path(ellipseIn: rect),
-                    with: .radialGradient(color.opacity(0.35), .clear, center: nebulaCenter, startRadius: 1, endRadius: outer)
+                    with: .radialGradient(nebula, center: nebulaCenter, startRadius: 1, endRadius: outer)
                 )
             }
 
@@ -241,7 +242,7 @@ struct GlitchMatrixLayer: View {
                         x: center.x + cos(angle) * radius,
                         y: center.y + sin(angle) * radius
                     )
-                    let copy = context
+                    var copy = context
                     copy.opacity = (1 - fall) * (0.5 + 0.5 * abs(sin(time * 3 + Double(index))))
                     copy.draw(
                         Text(Self.glyphs[index])
