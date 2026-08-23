@@ -15,6 +15,14 @@ enum NicknameStyleID: String, CaseIterable, Identifiable {
     case staticGlitch
     case neonPulse
     case galaxyText
+    case deepGalaxyRGB
+    case liquidGold
+    case infernoFlame
+    case electricPlasma
+    case cherryBlossomNeon
+    case blackHoleShimmer
+    case cyberGlitchMatrix
+    case neonEmerald
 
     var id: String { rawValue }
 }
@@ -34,7 +42,15 @@ struct NicknameStyleInfo: Identifiable {
         NicknameStyleInfo(id: .rainbowWave, title: "RAINBOW WAVE", requiredLevel: 75),
         NicknameStyleInfo(id: .staticGlitch, title: "STATIC GLITCH", requiredLevel: 75),
         NicknameStyleInfo(id: .neonPulse, title: "NEON PULSE", requiredLevel: 75),
-        NicknameStyleInfo(id: .galaxyText, title: "GALAXY TEXT", requiredLevel: 150)
+        NicknameStyleInfo(id: .galaxyText, title: "GALAXY TEXT", requiredLevel: 150),
+        NicknameStyleInfo(id: .deepGalaxyRGB, title: "DEEP GALAXY RGB", requiredLevel: 160),
+        NicknameStyleInfo(id: .liquidGold, title: "LIQUID GOLD", requiredLevel: 170),
+        NicknameStyleInfo(id: .infernoFlame, title: "INFERNO FLAME", requiredLevel: 180),
+        NicknameStyleInfo(id: .electricPlasma, title: "ELECTRIC PLASMA", requiredLevel: 190),
+        NicknameStyleInfo(id: .cherryBlossomNeon, title: "CHERRY BLOSSOM NEON", requiredLevel: 200),
+        NicknameStyleInfo(id: .blackHoleShimmer, title: "BLACK HOLE SHIMMER", requiredLevel: 220),
+        NicknameStyleInfo(id: .cyberGlitchMatrix, title: "CYBER GLITCH MATRIX", requiredLevel: 235),
+        NicknameStyleInfo(id: .neonEmerald, title: "NEON EMERALD", requiredLevel: 250)
     ]
 }
 
@@ -84,6 +100,14 @@ final class NicknameStyleManager {
         case .fireCrown: return 100
         case .burningText, .rainbowWave, .staticGlitch, .neonPulse: return 75
         case .galaxyText: return 150
+        case .deepGalaxyRGB: return 160
+        case .liquidGold: return 170
+        case .infernoFlame: return 180
+        case .electricPlasma: return 190
+        case .cherryBlossomNeon: return 200
+        case .blackHoleShimmer: return 220
+        case .cyberGlitchMatrix: return 235
+        case .neonEmerald: return 250
         }
     }
 
@@ -204,6 +228,39 @@ struct NicknameStyleSwatch: View {
                 Circle().fill(LinearGradient(colors: [Color(red: 0.15, green: 0.08, blue: 0.35),
                                                       Color(red: 0.45, green: 0.2, blue: 0.85),
                                                       Color(red: 0.15, green: 0.65, blue: 0.95)],
+                                             startPoint: .topLeading, endPoint: .bottomTrailing))
+            case .deepGalaxyRGB:
+                Circle().fill(LinearGradient(colors: [Color(red: 0.05, green: 0.05, blue: 0.25),
+                                                      Color(red: 0.4, green: 0.15, blue: 0.85),
+                                                      Color(red: 0.1, green: 0.6, blue: 0.95)],
+                                             startPoint: .leading, endPoint: .trailing))
+            case .liquidGold:
+                Circle().fill(LinearGradient(colors: [Color(red: 0.55, green: 0.38, blue: 0.05),
+                                                      Color(red: 1.0, green: 0.93, blue: 0.55),
+                                                      Color(red: 0.85, green: 0.62, blue: 0.1)],
+                                             startPoint: .top, endPoint: .bottom))
+            case .infernoFlame:
+                Circle().fill(LinearGradient(colors: [Color(red: 0.95, green: 0.2, blue: 0.05), .orange, .yellow],
+                                             startPoint: .bottom, endPoint: .top))
+            case .electricPlasma:
+                Circle().fill(LinearGradient(colors: [Color(red: 0.2, green: 0.95, blue: 1.0),
+                                                      Color(red: 0.55, green: 0.35, blue: 1.0)],
+                                             startPoint: .leading, endPoint: .trailing))
+            case .cherryBlossomNeon:
+                Circle().fill(LinearGradient(colors: [Color(red: 1.0, green: 0.72, blue: 0.86),
+                                                      Color(red: 1.0, green: 0.45, blue: 0.7)],
+                                             startPoint: .topLeading, endPoint: .bottomTrailing))
+            case .blackHoleShimmer:
+                Circle().fill(LinearGradient(colors: [Color(white: 0.08),
+                                                      Color(red: 0.35, green: 0.1, blue: 0.5)],
+                                             startPoint: .top, endPoint: .bottom))
+            case .cyberGlitchMatrix:
+                Circle().fill(LinearGradient(colors: [Color(red: 0.05, green: 0.95, blue: 0.35),
+                                                      Color(red: 0.0, green: 0.45, blue: 0.15)],
+                                             startPoint: .top, endPoint: .bottom))
+            case .neonEmerald:
+                Circle().fill(LinearGradient(colors: [Color(red: 0.1, green: 0.95, blue: 0.55),
+                                                      Color(red: 0.0, green: 0.65, blue: 0.4)],
                                              startPoint: .topLeading, endPoint: .bottomTrailing))
             }
             Text("A")

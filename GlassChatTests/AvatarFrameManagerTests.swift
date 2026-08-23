@@ -4,15 +4,15 @@ import XCTest
 @MainActor
 final class AvatarFrameManagerTests: XCTestCase {
     func testCatalogHasDistinctFramesIncludingPremium() {
-        XCTAssertEqual(AvatarFrameManager.catalog.count, 26)
-        XCTAssertEqual(Set(AvatarFrameManager.catalog.map(\.id)).count, 26)
+        XCTAssertEqual(AvatarFrameManager.catalog.count, 36)
+        XCTAssertEqual(Set(AvatarFrameManager.catalog.map(\.id)).count, 36)
     }
 
     func testStaticAndAnimatedTiers() {
         let staticFrames = AvatarFrameManager.catalog.filter { !$0.isAnimated }
         let animatedFrames = AvatarFrameManager.catalog.filter { $0.isAnimated }
         XCTAssertEqual(staticFrames.count, 10)
-        XCTAssertEqual(animatedFrames.count, 16)
+        XCTAssertEqual(animatedFrames.count, 26)
         XCTAssertTrue(staticFrames.allSatisfy { $0.requiredLevel >= 5 && $0.requiredLevel <= 40 })
         XCTAssertTrue(animatedFrames.allSatisfy { $0.requiredLevel >= 50 })
     }

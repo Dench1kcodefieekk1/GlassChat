@@ -9,7 +9,10 @@ enum PremiumCosmeticsManager {
     /// Frame IDs owned by the premium rendering engine.
     static let premiumFrameIDs: Set<String> = [
         "galaxyVortex", "solarFlare", "arcaneRune",
-        "angelicWings", "glitchMatrix", "glowingCrown"
+        "angelicWings", "glitchMatrix", "glowingCrown",
+        "supernovaBurst", "neonDragonAura", "cyberHoloRing",
+        "bloodMoonEclipse", "voidShadows", "goldenElysiumWings",
+        "plasmaVortex", "celestialOrb", "phantomFlame", "galacticCrown"
     ]
 
     static let premiumFrames: [AvatarFrame] = [
@@ -26,6 +29,26 @@ enum PremiumCosmeticsManager {
         AvatarFrame(id: "glitchMatrix", name: "GLITCH MATRIX", isAnimated: true, requiredLevel: 100,
                     glowColors: [Color(red: 0.13, green: 0.9, blue: 0.3), Color(red: 1.0, green: 0.08, blue: 0.58)]),
         AvatarFrame(id: "glowingCrown", name: "GLOWING CROWN", isAnimated: true, requiredLevel: 100,
-                    glowColors: [Color(red: 1.0, green: 0.84, blue: 0.0), Color(red: 1.0, green: 0.97, blue: 0.75)])
+                    glowColors: [Color(red: 1.0, green: 0.84, blue: 0.0), Color(red: 1.0, green: 0.97, blue: 0.75)]),
+        AvatarFrame(id: "supernovaBurst", name: "SUPERNOVA BURST", isAnimated: true, requiredLevel: 100,
+                    glowColors: [Color(red: 1.0, green: 0.95, blue: 0.8), Color(red: 1.0, green: 0.6, blue: 0.2), Color(red: 0.95, green: 0.35, blue: 0.5)]),
+        AvatarFrame(id: "neonDragonAura", name: "NEON DRAGON AURA", isAnimated: true, requiredLevel: 110,
+                    glowColors: [Color(red: 0.1, green: 0.95, blue: 0.45), Color(red: 0.9, green: 0.15, blue: 0.15)]),
+        AvatarFrame(id: "cyberHoloRing", name: "CYBERPUNK HOLO-RING", isAnimated: true, requiredLevel: 120,
+                    glowColors: [Color(red: 0.0, green: 0.95, blue: 0.95), Color(red: 0.55, green: 0.35, blue: 1.0)]),
+        AvatarFrame(id: "bloodMoonEclipse", name: "BLOOD MOON ECLIPSE", isAnimated: true, requiredLevel: 130,
+                    glowColors: [Color(red: 0.85, green: 0.1, blue: 0.12), Color(white: 0.08)]),
+        AvatarFrame(id: "voidShadows", name: "VOID SHADOWS", isAnimated: true, requiredLevel: 140,
+                    glowColors: [Color(red: 0.5, green: 0.15, blue: 0.85), Color(white: 0.05)]),
+        AvatarFrame(id: "goldenElysiumWings", name: "GOLDEN ELYSIUM WINGS", isAnimated: true, requiredLevel: 160,
+                    glowColors: [Color(red: 1.0, green: 0.85, blue: 0.35), Color(red: 1.0, green: 0.65, blue: 0.1)]),
+        AvatarFrame(id: "plasmaVortex", name: "PLASMA VORTEX", isAnimated: true, requiredLevel: 180,
+                    glowColors: [Color(red: 0.2, green: 0.9, blue: 1.0), Color(red: 0.85, green: 0.25, blue: 1.0), Color(red: 0.3, green: 0.4, blue: 1.0)]),
+        AvatarFrame(id: "celestialOrb", name: "CELESTIAL ORB", isAnimated: true, requiredLevel: 200,
+                    glowColors: [Color(red: 0.9, green: 0.95, blue: 1.0), Color(red: 1.0, green: 0.9, blue: 0.6)]),
+        AvatarFrame(id: "phantomFlame", name: "PHANTOM FLAME", isAnimated: true, requiredLevel: 220,
+                    glowColors: [Color(red: 0.2, green: 0.95, blue: 0.85), Color(red: 0.55, green: 0.3, blue: 0.95)]),
+        AvatarFrame(id: "galacticCrown", name: "GALACTIC CROWN", isAnimated: true, requiredLevel: 250,
+                    glowColors: [Color(red: 0.95, green: 0.8, blue: 0.25), Color(red: 0.55, green: 0.3, blue: 0.95)])
     ]
 }

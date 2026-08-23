@@ -85,16 +85,22 @@ struct CosmeticPickerSheet: View {
             }
         } label: {
             VStack(spacing: 7) {
-                ZStack(alignment: .bottomTrailing) {
-                    AnimatedAvatarView(
-                        name: me.name,
-                        seed: me.id,
-                        avatarFileName: me.avatarFileName,
-                        size: 68,
-                        frame: (unlocked ? frame : nil) as AvatarFrame?
-                    )
-
-                    statusBadge(unlocked: unlocked, equipped: equipped)
+                AnimatedAvatarView(
+                    name: me.name,
+                    seed: me.id,
+                    avatarFileName: me.avatarFileName,
+                    size: 68,
+                    frame: frame
+                )
+                // Locked designs stay inspectable — dimmed, never hidden.
+                .opacity(unlocked ? 1 : 0.5)
+                .overlay(alignment: .bottomTrailing) {
+                    if equipped {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.body)
+                            .foregroundStyle(.tint)
+                            .background(.white, in: Circle())
+                    }
                 }
 
                 Text(frame?.name ?? "Без рамки")
@@ -106,14 +112,6 @@ struct CosmeticPickerSheet: View {
                 Text(frame.map { $0.isAnimated ? "Анимированная" : "Статичная" } ?? "Сбросить оформление")
                     .font(.system(size: 9))
                     .foregroundStyle(frame?.isAnimated == true ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
-
-                if let frame, !unlocked {
-                    Text("🔒 Открывается на \(frame.requiredLevel) уровне")
-                        .font(.system(size: 8.5))
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.65)
-                }
             }
             .padding(10)
             .frame(maxWidth: .infinity)
@@ -121,6 +119,11 @@ struct CosmeticPickerSheet: View {
                 Color(uiColor: .secondarySystemGroupedBackground),
                 in: RoundedRectangle(cornerRadius: 16, style: .continuous)
             )
+            .overlay(alignment: .topTrailing) {
+                if let frame, !unlocked {
+                    lockPill(level: frame.requiredLevel)
+                }
+            }
             .overlay(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .strokeBorder(equipped ? Color.blue.opacity(0.7) : .clear, lineWidth: 1.5)
@@ -156,9 +159,11 @@ struct CosmeticPickerSheet: View {
             VStack(spacing: 8) {
                 AnimatedNicknameView(
                     name: me.name,
-                    style: (unlocked ? info.id : .standard) as NicknameStyleID,
+                    style: info.id,
                     font: .title3.weight(.semibold)
                 )
+                // Locked designs stay inspectable — dimmed, never hidden.
+                .opacity(unlocked ? 1 : 0.5)
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
                 .frame(maxWidth: .infinity)
@@ -175,11 +180,9 @@ struct CosmeticPickerSheet: View {
                         .font(.system(size: 9))
                         .foregroundStyle(active ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
                 } else {
-                    Text("🔒 Открывается на \(info.requiredLevel) уровне")
-                        .font(.system(size: 8.5))
+                    Text("Недоступно")
+                        .font(.system(size: 9))
                         .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.65)
                 }
             }
             .padding(10)
@@ -188,6 +191,11 @@ struct CosmeticPickerSheet: View {
                 Color(uiColor: .secondarySystemGroupedBackground),
                 in: RoundedRectangle(cornerRadius: 16, style: .continuous)
             )
+            .overlay(alignment: .topTrailing) {
+                if !unlocked {
+                    lockPill(level: info.requiredLevel)
+                }
+            }
             .overlay(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .strokeBorder(active ? Color.blue.opacity(0.7) : .clear, lineWidth: 1.5)
@@ -205,19 +213,14 @@ struct CosmeticPickerSheet: View {
             .padding(.horizontal, 4)
     }
 
-    @ViewBuilder
-    private func statusBadge(unlocked: Bool, equipped: Bool) -> some View {
-        if equipped {
-            Image(systemName: "checkmark.circle.fill")
-                .font(.body)
-                .foregroundStyle(.tint)
-                .background(.white, in: Circle())
-        } else if !unlocked {
-            Image(systemName: "lock.fill")
-                .font(.caption2)
-                .foregroundStyle(.white)
-                .padding(5)
-                .background(.black.opacity(0.55), in: Circle())
-        }
+    /// Subtle lock capsule pinned to the top-right corner of locked cards.
+    private func lockPill(level: Int) -> some View {
+        Text("🔒 \(level) LVL")
+            .font(.system(size: 8.5, weight: .bold))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 3)
+            .background(.black.opacity(0.6), in: Capsule())
+            .padding(6)
     }
 }

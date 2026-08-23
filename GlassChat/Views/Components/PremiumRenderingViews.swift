@@ -16,32 +16,58 @@ struct AnimatedAvatarView: View {
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+    /// Frame IDs whose effect renders as wings behind the avatar.
+    private var isWingsFrame: Bool {
+        frame?.id == "angelicWings" || frame?.id == "goldenElysiumWings"
+    }
+
     var body: some View {
         ZStack {
-            // Behind-avatar layers (wings).
-            if frame?.id == "angelicWings", !reduceMotion {
+            // Layer 1 (deepest): wings radiate outward behind the avatar.
+            if let frame, isWingsFrame, !reduceMotion {
                 TimelineView(.animation) { context in
-                    AngelWingsLayer(time: context.date.timeIntervalSinceReferenceDate)
+                    AngelWingsLayer(
+                        time: context.date.timeIntervalSinceReferenceDate,
+                        baseColor: frame.glowColors.first ?? .white,
+                        tipColor: frame.glowColors.count > 1 ? frame.glowColors[1] : .white
+                    )
                 }
             }
 
-            AvatarView(
-                title: name,
-                seed: seed,
-                size: size,
-                isOnline: isOnline,
-                fileName: avatarFileName
-            )
-        }
-        .frame(width: size + 12, height: size + 12)
-        .overlay {
-            if frame?.id == "angelicWings" {
-                // Wings carry their own glow — skip the plain ring.
-                EmptyView()
-            } else {
+            // Layer 2: rings, glows and particle canvases — strictly behind
+            // the avatar circle, so effects radiate from the border outward
+            // and can never cover the face.
+            if let frame, !isWingsFrame {
                 AvatarFrameOverlayView(frame: frame, avatarSize: size) {
                     Color.clear.frame(width: size, height: size)
                 }
+            }
+
+            // Layer 3 (topmost): the avatar itself, hard-masked to a circle.
+            avatarFace
+        }
+        .frame(width: size + 16, height: size + 16)
+    }
+
+    /// The user image strictly clipped to a circle; the online badge is
+    /// re-composited above the mask so it survives the clip.
+    private var avatarFace: some View {
+        AvatarView(
+            title: name,
+            seed: seed,
+            size: size,
+            isOnline: false,
+            fileName: avatarFileName
+        )
+        .clipShape(Circle())
+        .overlay(alignment: .bottomTrailing) {
+            if isOnline {
+                Circle()
+                    .fill(.green)
+                    .frame(width: size * 0.26, height: size * 0.26)
+                    .overlay(
+                        Circle().stroke(Color(uiColor: .systemBackground), lineWidth: 2)
+                    )
             }
         }
     }
@@ -65,9 +91,26 @@ struct PremiumFrameEffectLayer: View {
             ArcaneRuneLayer(frame: frame, size: size, time: time)
         case "glitchMatrix":
             GlitchMatrixLayer(frame: frame, size: size, time: time)
-        case "glowingCrown":
+        case "glowingCrown", "galacticCrown":
             GlowingCrownLayer(frame: frame, size: size, time: time)
+        case "supernovaBurst":
+            SupernovaBurstLayer(frame: frame, size: size, time: time)
+        case "neonDragonAura":
+            NeonDragonAuraLayer(frame: frame, size: size, time: time)
+        case "cyberHoloRing":
+            CyberHoloRingLayer(frame: frame, size: size, time: time)
+        case "bloodMoonEclipse":
+            BloodMoonEclipseLayer(frame: frame, size: size, time: time)
+        case "voidShadows":
+            VoidShadowsLayer(frame: frame, size: size, time: time)
+        case "plasmaVortex":
+            PlasmaVortexLayer(frame: frame, size: size, time: time)
+        case "celestialOrb":
+            CelestialOrbLayer(frame: frame, size: size, time: time)
+        case "phantomFlame":
+            PhantomFlameLayer(frame: frame, size: size, time: time)
         default:
+            // goldenElysiumWings renders behind the avatar in AnimatedAvatarView.
             EmptyView()
         }
     }
@@ -301,16 +344,283 @@ struct GlowingCrownLayer: View {
     }
 }
 
+/// SUPERNOVA BURST — expanding shockwave rings plus outward white-hot sparks.
+struct SupernovaBurstLayer: View {
+    let frame: AvatarFrame
+    let size: CGFloat
+    let time: TimeInterval
+
+    var body: some View {
+        Canvas { context, canvasSize in
+            let center = CGPoint(x: canvasSize.width / 2, y: canvasSize.height / 2)
+            let outer = min(canvasSize.width, canvasSize.height) / 2 - 2
+            let inner = outer * 0.8
+
+            for wave in 0..<3 {
+                let life = (time * 0.8 + Double(wave) / 3).truncatingRemainder(dividingBy: 1)
+                let radius = inner + life * (outer - inner) * 1.2
+                let rect = CGRect(x: center.x - radius, y: center.y - radius,
+                                  width: radius * 2, height: radius * 2)
+                context.opacity = (1 - life) * 0.65
+                context.stroke(Path(ellipseIn: rect), with: .color(frame.glowColors[wave % frame.glowColors.count]), lineWidth: 1.4)
+            }
+
+            for index in 0..<20 {
+                let seed = Double(index)
+                let hash = abs(sin(seed * 12.9898) * 43758.5453).truncatingRemainder(dividingBy: 1)
+                let hash2 = abs(sin(seed * 78.233) * 12543.19).truncatingRemainder(dividingBy: 1)
+                let life = (time * (0.9 + hash * 0.6) + hash2).truncatingRemainder(dividingBy: 1)
+                let angle = hash2 * 2 * .pi
+                let radius = inner + life * (outer - inner) * 1.25
+                let spark = (1.2 + hash * 2) * (1 - life * 0.6)
+                let position = CGPoint(x: center.x + cos(angle) * radius, y: center.y + sin(angle) * radius)
+                let rect = CGRect(x: position.x - spark, y: position.y - spark, width: spark * 2, height: spark * 2)
+                context.opacity = max(0, 1 - life)
+                context.fill(Path(ellipseIn: rect), with: .color(.white))
+            }
+
+            context.opacity = 0.9
+            let rim = CGRect(x: center.x - inner, y: center.y - inner, width: inner * 2, height: inner * 2)
+            context.stroke(Path(ellipseIn: rim), with: .color(frame.glowColors[0].opacity(0.8)), lineWidth: 1.6)
+        }
+        .frame(width: size, height: size)
+    }
+}
+
+/// NEON DRAGON AURA — thick breathing neon coil with a hot flicker shadow.
+struct NeonDragonAuraLayer: View {
+    let frame: AvatarFrame
+    let size: CGFloat
+    let time: TimeInterval
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .stroke(
+                    AngularGradient(colors: frame.glowColors + [frame.glowColors[0]], center: .center),
+                    lineWidth: 2.6 + 1.6 * abs(sin(time * 4.2))
+                )
+                .rotationEffect(.degrees(time * 55))
+                .shadow(color: frame.glowColors[0].opacity(0.6 + 0.3 * abs(sin(time * 6))), radius: 6)
+            Circle()
+                .stroke(frame.glowColors[1].opacity(0.5), lineWidth: 1)
+                .rotationEffect(.degrees(-time * 35))
+        }
+        .frame(width: size, height: size)
+    }
+}
+
+/// CYBERPUNK HOLO-RING — counter-rotating dashed hologram bands with scan flicker.
+struct CyberHoloRingLayer: View {
+    let frame: AvatarFrame
+    let size: CGFloat
+    let time: TimeInterval
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .stroke(frame.glowColors[0], style: StrokeStyle(lineWidth: 1.8, dash: [6, 4]))
+                .rotationEffect(.degrees(time * 130))
+            Circle()
+                .stroke(frame.glowColors[1].opacity(0.7), style: StrokeStyle(lineWidth: 1.1, dash: [2, 3]))
+                .rotationEffect(.degrees(-time * 90))
+        }
+        .opacity(0.7 + 0.3 * abs(sin(time * 5)))
+        .shadow(color: frame.glowColors[0].opacity(0.6), radius: 4)
+        .frame(width: size, height: size)
+    }
+}
+
+/// BLOOD MOON ECLIPSE — crimson glow annulus with a slow eclipsing dark limb.
+struct BloodMoonEclipseLayer: View {
+    let frame: AvatarFrame
+    let size: CGFloat
+    let time: TimeInterval
+
+    var body: some View {
+        Canvas { context, canvasSize in
+            let center = CGPoint(x: canvasSize.width / 2, y: canvasSize.height / 2)
+            let outer = min(canvasSize.width, canvasSize.height) / 2 - 2
+            let inner = outer * 0.8
+
+            let glow = Gradient(colors: [frame.glowColors[0].opacity(0.55), .clear])
+            context.fill(
+                Path(ellipseIn: CGRect(x: center.x - outer, y: center.y - outer, width: outer * 2, height: outer * 2)),
+                with: .radialGradient(glow, center: center, startRadius: inner * 0.9, endRadius: outer)
+            )
+
+            context.opacity = 0.95
+            let rim = CGRect(x: center.x - inner, y: center.y - inner, width: inner * 2, height: inner * 2)
+            context.stroke(Path(ellipseIn: rim), with: .color(frame.glowColors[0]), lineWidth: 2)
+
+            // Dark limb sliding around the rim like an eclipse shadow.
+            var eclipse = Path()
+            let phase = time * 40
+            eclipse.addArc(center: center, radius: inner, startAngle: .degrees(phase),
+                           endAngle: .degrees(phase + 110), clockwise: false)
+            context.opacity = 0.8
+            context.stroke(eclipse, with: .color(frame.glowColors[1]), lineWidth: 3.4)
+        }
+        .frame(width: size, height: size)
+    }
+}
+
+/// VOID SHADOWS — dark smoke wisps circling the rim under a violet edge.
+struct VoidShadowsLayer: View {
+    let frame: AvatarFrame
+    let size: CGFloat
+    let time: TimeInterval
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .stroke(frame.glowColors[0].opacity(0.85), lineWidth: 1.6)
+                .shadow(color: frame.glowColors[0].opacity(0.6), radius: 5)
+
+            Canvas { context, canvasSize in
+                let center = CGPoint(x: canvasSize.width / 2, y: canvasSize.height / 2)
+                let radius = min(canvasSize.width, canvasSize.height) / 2 - 4
+                for index in 0..<10 {
+                    let seed = Double(index)
+                    let hash = abs(sin(seed * 12.9898) * 43758.5453).truncatingRemainder(dividingBy: 1)
+                    let angle = time * (0.5 + hash * 0.4) + seed * 0.63
+                    let wisp = 2.5 + hash * 3
+                    let position = CGPoint(x: center.x + cos(angle) * radius, y: center.y + sin(angle) * radius)
+                    let rect = CGRect(x: position.x - wisp, y: position.y - wisp, width: wisp * 2, height: wisp * 2)
+                    context.opacity = 0.35 + 0.3 * abs(sin(time * 2 + seed))
+                    context.fill(Path(ellipseIn: rect), with: .color(frame.glowColors[1]))
+                }
+            }
+        }
+        .frame(width: size, height: size)
+    }
+}
+
+/// PLASMA VORTEX — fast-spinning charged annulus with crackling particles.
+struct PlasmaVortexLayer: View {
+    let frame: AvatarFrame
+    let size: CGFloat
+    let time: TimeInterval
+
+    var body: some View {
+        Canvas { context, canvasSize in
+            let center = CGPoint(x: canvasSize.width / 2, y: canvasSize.height / 2)
+            let outer = min(canvasSize.width, canvasSize.height) / 2 - 2
+            let inner = outer * 0.8
+
+            for (index, color) in frame.glowColors.enumerated() {
+                let angle = time * 0.9 + Double(index) * (2 * .pi / Double(frame.glowColors.count))
+                let blob = CGPoint(x: center.x + cos(angle) * inner * 0.9, y: center.y + sin(angle) * inner * 0.9)
+                let gradient = Gradient(colors: [color.opacity(0.4), .clear])
+                let rect = CGRect(x: blob.x - outer, y: blob.y - outer, width: outer * 2, height: outer * 2)
+                context.opacity = 1
+                context.fill(Path(ellipseIn: rect),
+                             with: .radialGradient(gradient, center: blob, startRadius: 1, endRadius: outer * 0.8))
+            }
+
+            for index in 0..<24 {
+                let seed = Double(index)
+                let hash = abs(sin(seed * 12.9898) * 43758.5453).truncatingRemainder(dividingBy: 1)
+                let angle = time * (1.6 + hash) + seed * 0.26
+                let radius = inner + hash * (outer - inner)
+                let dot = 0.7 + hash * 1.3
+                let position = CGPoint(x: center.x + cos(angle) * radius, y: center.y + sin(angle) * radius)
+                let rect = CGRect(x: position.x - dot, y: position.y - dot, width: dot * 2, height: dot * 2)
+                context.opacity = 0.5 + 0.5 * abs(sin(time * 4 + seed))
+                context.fill(Path(ellipseIn: rect), with: .color(frame.glowColors[index % frame.glowColors.count]))
+            }
+
+            context.opacity = 0.9
+            let rim = CGRect(x: center.x - inner, y: center.y - inner, width: inner * 2, height: inner * 2)
+            context.stroke(Path(ellipseIn: rim), with: .color(frame.glowColors[0].opacity(0.7)), lineWidth: 1.3)
+        }
+        .frame(width: size, height: size)
+    }
+}
+
+/// CELESTIAL ORB — serene halo with slow orbiting star sparkles.
+struct CelestialOrbLayer: View {
+    let frame: AvatarFrame
+    let size: CGFloat
+    let time: TimeInterval
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .stroke(
+                    LinearGradient(colors: frame.glowColors, startPoint: .topLeading, endPoint: .bottomTrailing),
+                    lineWidth: 2
+                )
+                .shadow(color: frame.glowColors[0].opacity(0.5 + 0.25 * abs(sin(time * 1.4))), radius: 6)
+
+            Image(systemName: "sparkle")
+                .font(.system(size: max(6, size * 0.06), weight: .bold))
+                .foregroundStyle(frame.glowColors[0])
+                .modifier(OrbitEffect(angle: time * 40, radius: size / 2 - 2))
+            Image(systemName: "sparkle")
+                .font(.system(size: max(5, size * 0.045), weight: .bold))
+                .foregroundStyle(frame.glowColors[1])
+                .modifier(OrbitEffect(angle: time * 40 + 120, radius: size / 2 - 2))
+            Image(systemName: "sparkle")
+                .font(.system(size: max(4, size * 0.04), weight: .bold))
+                .foregroundStyle(frame.glowColors[0].opacity(0.8))
+                .modifier(OrbitEffect(angle: time * 40 + 240, radius: size / 2 - 2))
+        }
+        .frame(width: size, height: size)
+    }
+}
+
+/// PHANTOM FLAME — spectral teal fire drifting up around the rim.
+struct PhantomFlameLayer: View {
+    let frame: AvatarFrame
+    let size: CGFloat
+    let time: TimeInterval
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .stroke(frame.glowColors[0].opacity(0.55), lineWidth: 1.4)
+                .shadow(color: frame.glowColors[0].opacity(0.6), radius: 4)
+
+            Canvas { context, canvasSize in
+                let center = CGPoint(x: canvasSize.width / 2, y: canvasSize.height / 2)
+                let radius = min(canvasSize.width, canvasSize.height) / 2 - 5
+                for index in 0..<18 {
+                    let seed = Double(index)
+                    let hash = abs(sin(seed * 12.9898) * 43758.5453).truncatingRemainder(dividingBy: 1)
+                    let hash2 = abs(sin(seed * 78.233) * 12543.19).truncatingRemainder(dividingBy: 1)
+                    let life = (time * (0.6 + hash * 0.5) + hash2).truncatingRemainder(dividingBy: 1)
+                    let angle = hash * 2 * .pi + sin(time * 1.5 + seed) * 0.15
+                    let lift = life * size * 0.18
+                    let position = CGPoint(
+                        x: center.x + cos(angle) * radius,
+                        y: center.y + sin(angle) * radius - lift
+                    )
+                    let flame = (1.4 + hash2 * 2.2) * (1 - life * 0.6)
+                    let rect = CGRect(x: position.x - flame, y: position.y - flame,
+                                      width: flame * 2, height: flame * 2)
+                    context.opacity = max(0, 0.8 - life)
+                    context.fill(Path(ellipseIn: rect),
+                                 with: .color(index % 2 == 0 ? frame.glowColors[0] : frame.glowColors[1]))
+                }
+            }
+        }
+        .frame(width: size, height: size)
+    }
+}
+
 /// ANGELIC WINGS — feathered light wings gently flapping behind the avatar.
 struct AngelWingsLayer: View {
     let time: TimeInterval
+    var baseColor: Color = .white
+    var tipColor: Color = Color(red: 0.85, green: 0.92, blue: 1.0)
 
     var body: some View {
         let flap = sin(time * 1.7)
         ZStack {
             WingShape(side: .left)
                 .fill(
-                    LinearGradient(colors: [Color.white.opacity(0.75), Color(red: 0.85, green: 0.92, blue: 1.0).opacity(0.1)],
+                    LinearGradient(colors: [baseColor.opacity(0.75), tipColor.opacity(0.1)],
                                    startPoint: .trailing, endPoint: .leading)
                 )
                 .blur(radius: 1.5)
@@ -318,7 +628,7 @@ struct AngelWingsLayer: View {
                 .offset(x: -30, y: -4)
             WingShape(side: .right)
                 .fill(
-                    LinearGradient(colors: [Color.white.opacity(0.75), Color(red: 0.85, green: 0.92, blue: 1.0).opacity(0.1)],
+                    LinearGradient(colors: [baseColor.opacity(0.75), tipColor.opacity(0.1)],
                                    startPoint: .leading, endPoint: .trailing)
                 )
                 .blur(radius: 1.5)
@@ -433,6 +743,117 @@ struct AnimatedNicknameView: View {
                     .foregroundStyle(galaxyGradient(at: time))
                     .shadow(color: Color(red: 0.4, green: 0.2, blue: 0.9).opacity(0.6), radius: 4)
             }
+        case .deepGalaxyRGB:
+            TimelineView(.animation) { context in
+                let time = context.date.timeIntervalSinceReferenceDate
+                Text(name)
+                    .font(font)
+                    .foregroundStyle(sweepingGradient(colors: [
+                        Color(red: 0.05, green: 0.05, blue: 0.25),
+                        Color(red: 0.4, green: 0.15, blue: 0.85),
+                        Color(red: 0.1, green: 0.6, blue: 0.95),
+                        Color(red: 0.85, green: 0.3, blue: 0.85)
+                    ], time: time, speed: 0.35))
+                    .shadow(color: Color(red: 0.3, green: 0.2, blue: 0.9).opacity(0.75), radius: 5)
+            }
+        case .liquidGold:
+            TimelineView(.animation) { context in
+                let time = context.date.timeIntervalSinceReferenceDate
+                Text(name)
+                    .font(font)
+                    .foregroundStyle(sweepingGradient(colors: [
+                        Color(red: 0.55, green: 0.38, blue: 0.05),
+                        Color(red: 1.0, green: 0.93, blue: 0.55),
+                        Color(red: 0.85, green: 0.62, blue: 0.1),
+                        Color(red: 1.0, green: 0.85, blue: 0.35)
+                    ], time: time, speed: 0.45))
+                    .shadow(color: Color(red: 1.0, green: 0.8, blue: 0.25).opacity(0.65), radius: 4)
+            }
+        case .infernoFlame:
+            TimelineView(.animation) { context in
+                let time = context.date.timeIntervalSinceReferenceDate
+                Text(name)
+                    .font(font)
+                    .foregroundStyle(
+                        LinearGradient(
+                            stops: [
+                                .init(color: Color(red: 0.95, green: 0.2, blue: 0.05), location: 0),
+                                .init(color: .orange, location: 0.5 + 0.1 * sin(time * 5)),
+                                .init(color: .yellow, location: 1)
+                            ],
+                            startPoint: .bottom, endPoint: .top
+                        )
+                    )
+                    .shadow(color: .red.opacity(0.55 + 0.3 * abs(sin(time * 6))), radius: 5)
+            }
+        case .electricPlasma:
+            TimelineView(.animation) { context in
+                let time = context.date.timeIntervalSinceReferenceDate
+                let zap = 0.55 + 0.45 * abs(sin(time * 8))
+                Text(name)
+                    .font(font)
+                    .foregroundStyle(sweepingGradient(colors: [
+                        Color(red: 0.2, green: 0.95, blue: 1.0),
+                        Color(red: 0.55, green: 0.35, blue: 1.0),
+                        Color(red: 0.9, green: 0.98, blue: 1.0)
+                    ], time: time, speed: 0.7))
+                    .shadow(color: Color(red: 0.3, green: 0.85, blue: 1.0).opacity(zap), radius: 3 + 6 * zap)
+            }
+        case .cherryBlossomNeon:
+            TimelineView(.animation) { context in
+                let time = context.date.timeIntervalSinceReferenceDate
+                Text(name)
+                    .font(font)
+                    .foregroundStyle(sweepingGradient(colors: [
+                        Color(red: 1.0, green: 0.72, blue: 0.86),
+                        Color(red: 1.0, green: 0.45, blue: 0.7),
+                        Color(red: 0.98, green: 0.9, blue: 1.0)
+                    ], time: time, speed: 0.3))
+                    .shadow(color: Color(red: 1.0, green: 0.5, blue: 0.75)
+                        .opacity(0.6 + 0.3 * abs(sin(time * 2.2))), radius: 5)
+            }
+        case .blackHoleShimmer:
+            TimelineView(.animation) { context in
+                let time = context.date.timeIntervalSinceReferenceDate
+                let shimmer = 0.35 + 0.65 * abs(sin(time * 1.6))
+                Text(name)
+                    .font(font)
+                    .foregroundStyle(sweepingGradient(colors: [
+                        Color(red: 0.12, green: 0.02, blue: 0.2),
+                        Color(red: 0.35, green: 0.1, blue: 0.5),
+                        Color(white: 0.08)
+                    ], time: time, speed: 0.25))
+                    .shadow(color: Color(red: 0.6, green: 0.3, blue: 1.0).opacity(shimmer), radius: 2 + 5 * shimmer)
+            }
+        case .cyberGlitchMatrix:
+            TimelineView(.animation) { context in
+                let time = context.date.timeIntervalSinceReferenceDate
+                let glitching = time.truncatingRemainder(dividingBy: 1.3) < 0.2
+                let jitter = glitching ? sin(time * 140) * 1.6 : 0.0
+                Text(name)
+                    .font(font)
+                    .foregroundStyle(sweepingGradient(colors: [
+                        Color(red: 0.05, green: 0.95, blue: 0.35),
+                        Color(red: 0.0, green: 0.45, blue: 0.15),
+                        Color(red: 0.5, green: 1.0, blue: 0.65)
+                    ], time: time, speed: 0.5))
+                    .offset(x: jitter)
+                    .shadow(color: Color(red: 0.1, green: 0.9, blue: 0.3).opacity(0.7), radius: 4)
+            }
+        case .neonEmerald:
+            TimelineView(.animation) { context in
+                let time = context.date.timeIntervalSinceReferenceDate
+                let breath = 0.5 + 0.5 * sin(time * 2)
+                Text(name)
+                    .font(font)
+                    .foregroundStyle(sweepingGradient(colors: [
+                        Color(red: 0.1, green: 0.95, blue: 0.55),
+                        Color(red: 0.0, green: 0.65, blue: 0.4),
+                        Color(red: 0.6, green: 1.0, blue: 0.8)
+                    ], time: time, speed: 0.3))
+                    .shadow(color: Color(red: 0.1, green: 0.95, blue: 0.55).opacity(0.5 + 0.4 * breath),
+                            radius: 3 + 7 * breath)
+            }
         }
     }
 
@@ -481,33 +902,52 @@ struct AnimatedNicknameView: View {
         }
     }
 
-    // MARK: STATIC GLITCH — periodic RGB-split bursts.
+    // MARK: STATIC GLITCH — rapid RGB-split bursts with pixel jitter.
 
     @ViewBuilder
     private func glitchBody(time: TimeInterval) -> some View {
-        let cycle = time.truncatingRemainder(dividingBy: 2.4)
-        let glitching = cycle < 0.16
-        let jitter = glitching ? sin(time * 90) * 1.6 : 0.0
+        // Burst windows recur fast (every 1.1s) and last ~20% of the cycle.
+        let cycle = time.truncatingRemainder(dividingBy: 1.1)
+        let glitching = cycle < 0.22
+        // High-frequency displacement: chromatic aberration on both axes.
+        let burst = glitching ? sin(time * 160) * 2.6 : 0.0
+        let vertical = glitching ? cos(time * 120) * 1.1 : 0.0
+        // Micro-flicker keeps the ghost copies strobing inside a burst.
+        let flicker = glitching ? 0.65 + 0.35 * abs(sin(time * 240)) : 0.0
+        // Horizontal pixel jitter shakes the base glyphs during bursts.
+        let jitterX = glitching ? sin(time * 210) * 1.3 : 0.0
         ZStack {
             if glitching {
                 Text(name)
                     .font(font)
                     .foregroundStyle(.red)
-                    .offset(x: -jitter, y: jitter * 0.4)
-                    .opacity(0.85)
+                    .offset(x: -burst, y: vertical)
+                    .opacity(flicker)
                 Text(name)
                     .font(font)
                     .foregroundStyle(.cyan)
-                    .offset(x: jitter, y: -jitter * 0.4)
-                    .opacity(0.85)
+                    .offset(x: burst, y: -vertical)
+                    .opacity(flicker)
             }
             Text(name)
                 .font(font)
                 .foregroundStyle(glitching ? .white : .primary)
+                .offset(x: jitterX)
+                .opacity(glitching ? 0.8 + 0.2 * abs(sin(time * 300)) : 1)
         }
     }
 
     // MARK: Gradients
+
+    /// Linear gradient whose axis sweeps around the text over time.
+    private func sweepingGradient(colors: [Color], time: TimeInterval, speed: Double) -> LinearGradient {
+        let angle = time * speed * 2 * .pi
+        return LinearGradient(
+            colors: colors,
+            startPoint: UnitPoint(x: 0.5 + cos(angle) * 0.5, y: 0.5 + sin(angle) * 0.5),
+            endPoint: UnitPoint(x: 0.5 - cos(angle) * 0.5, y: 0.5 - sin(angle) * 0.5)
+        )
+    }
 
     private func rainbowWaveGradient(at time: TimeInterval) -> LinearGradient {
         let colors = (0..<6).map { index -> Color in

@@ -4,7 +4,7 @@ import XCTest
 @MainActor
 final class NicknameStyleManagerTests: XCTestCase {
     func testRequiredLevelsMatchSpec() {
-        XCTAssertEqual(NicknameStyleInfo.all.count, 10)
+        XCTAssertEqual(NicknameStyleInfo.all.count, 18)
         XCTAssertEqual(NicknameStyleManager.requiredLevel(for: .standard), 1)
         XCTAssertEqual(NicknameStyleManager.requiredLevel(for: .neonViolet), 10)
         XCTAssertEqual(NicknameStyleManager.requiredLevel(for: .cyberGold), 25)

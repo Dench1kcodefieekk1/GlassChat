@@ -3,9 +3,6 @@ import UIKit
 
 struct UserProfileView: View {
     @Environment(DataStore.self) private var store
-    @Environment(AppState.self) private var appState
-    @State private var showCompose = false
-    @State private var showCall = false
     @State private var toast: String?
     @State private var mediaTab: ProfileMediaTab = .media
     @State private var viewerItem: ViewerItem?
@@ -22,7 +19,6 @@ struct UserProfileView: View {
                 VStack(spacing: 0) {
                     header
                     VStack(spacing: 20) {
-                        actions
                         infoCard
                         mediaSection
                         ProfileMusicSection()
@@ -43,16 +39,6 @@ struct UserProfileView: View {
                     }
                     .accessibilityLabel("Edit profile")
                 }
-            }
-            .sheet(isPresented: $showCompose) {
-                ComposeView { userID in
-                    showCompose = false
-                    appState.selectedTab = .chats
-                    appState.pendingOpenChatID = store.createDirectChat(with: userID).id
-                }
-            }
-            .fullScreenCover(isPresented: $showCall) {
-                SimulatedCallView(user: me)
             }
             .fullScreenCover(item: $viewerItem) { item in
                 ImageViewerView(fileName: item.fileName)
@@ -217,39 +203,6 @@ struct UserProfileView: View {
         }
     }
 
-    // MARK: - Actions
-
-    private var actions: some View {
-        HStack(spacing: 24) {
-            GlassActionButton(title: "Message", systemImage: "bubble.fill") {
-                Haptics.light()
-                showCompose = true
-            }
-            GlassActionButton(title: "Call", systemImage: "phone.fill") {
-                guard store.settings.allowCalls else {
-                    showToast("Calls are disabled in Privacy")
-                    return
-                }
-                Haptics.light()
-                showCall = true
-            }
-            GlassActionButton(title: "Video", systemImage: "video.fill") {
-                guard store.settings.allowCalls else {
-                    showToast("Calls are disabled in Privacy")
-                    return
-                }
-                Haptics.light()
-                showCall = true
-            }
-            GlassActionButton(title: "Search", systemImage: "magnifyingglass") {
-                Haptics.light()
-                appState.selectedTab = .chats
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 4)
-    }
-
     // MARK: - Info card
 
     private var infoCard: some View {
@@ -269,8 +222,6 @@ struct UserProfileView: View {
                 subtitle: "Registration Date",
                 copyable: false
             )
-            divider
-            infoRow(icon: "number", color: .gray, title: me.id, subtitle: "User ID", copyable: true)
             if let channel = me.linkedChannel {
                 divider
                 infoRow(icon: "megaphone.fill", color: .purple, title: channel, subtitle: "Linked Channel", copyable: false)
