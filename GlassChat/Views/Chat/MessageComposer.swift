@@ -120,6 +120,7 @@ struct MessageComposer: View {
                         .contentShape(Circle())
                 }
                 .buttonStyle(PressScaleButtonStyle(scale: 0.88))
+                .keyboardShortcut(.return, modifiers: .command)
                 .transition(.scale.combined(with: .opacity))
                 .accessibilityLabel(model.editingMessage == nil ? "Send message" : "Save edit")
             } else {

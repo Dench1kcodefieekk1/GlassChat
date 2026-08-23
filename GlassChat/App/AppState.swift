@@ -12,6 +12,23 @@ enum AppRoute: Hashable {
     case profile(String)
 }
 
+/// Settings pane a `.settings` detail destination points at (reserved for
+/// deep-linking into a specific settings section).
+enum IPadSettingsSection: String, Hashable {
+    case account
+    case general
+    case cosmetics
+}
+
+/// Detail-column destinations for the regular-width (iPad) split layout.
+enum IPadDetailDestination: Hashable {
+    case chat(chatId: String)
+    case profile(userId: String)
+    case settings(section: IPadSettingsSection?)
+    case appearance(cosmeticsSheet: Bool)
+    case emptyState
+}
+
 @MainActor
 @Observable
 final class AppState {
@@ -19,6 +36,8 @@ final class AppState {
     /// Chat the UI should navigate to (e.g. after the compose sheet dismisses
     /// or an in-app notification is tapped). Consumed by the chats tab.
     var pendingOpenChatID: String? = nil
+    /// Detail panel currently routed in the iPad split layout.
+    var iPadDestination: IPadDetailDestination = .emptyState
 }
 
 @MainActor

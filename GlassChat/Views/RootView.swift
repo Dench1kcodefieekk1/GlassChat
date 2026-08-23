@@ -3,22 +3,17 @@ import SwiftUI
 struct RootView: View {
     @Environment(AppState.self) private var appState
     @Environment(DataStore.self) private var store
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     var body: some View {
         @Bindable var appState = appState
-        TabView(selection: $appState.selectedTab) {
-            Tab("Chats", systemImage: "bubble.left.and.bubble.right.fill", value: .chats) {
-                ChatsTabView()
-                    .badge(store.totalUnread)
-            }
-            Tab("Contacts", systemImage: "person.2.fill", value: .contacts) {
-                ContactsTabView()
-            }
-            Tab("Settings", systemImage: "gearshape.fill", value: .settings) {
-                SettingsTabView()
+        Group {
+            if horizontalSizeClass == .regular {
+                IPadSplitNavigationContainer()
+            } else {
+                compactTabs(appState)
             }
         }
-        .tabBarMinimizeBehavior(.onScrollDown)
         .overlay {
             InAppNotificationView { banner in
                 InAppNotificationCenter.shared.dismiss()
@@ -33,6 +28,22 @@ struct RootView: View {
         }
         .animation(.spring(response: 0.4, dampingFraction: 0.85),
                    value: LevelUpAudioNotifier.shared.celebrationLevel)
+    }
+
+    private func compactTabs(_ appState: Bindable<AppState>) -> some View {
+        TabView(selection: appState.selectedTab) {
+            Tab("Chats", systemImage: "bubble.left.and.bubble.right.fill", value: .chats) {
+                ChatsTabView()
+                    .badge(store.totalUnread)
+            }
+            Tab("Contacts", systemImage: "person.2.fill", value: .contacts) {
+                ContactsTabView()
+            }
+            Tab("Settings", systemImage: "gearshape.fill", value: .settings) {
+                SettingsTabView()
+            }
+        }
+        .tabBarMinimizeBehavior(.onScrollDown)
     }
 }
 
