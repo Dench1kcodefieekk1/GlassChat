@@ -61,7 +61,7 @@ struct UserProfileView: View {
                 UserRatingSheetView()
             }
             .sheet(isPresented: $showFramePicker) {
-                AvatarFramePickerSheet()
+                CosmeticPickerSheet()
             }
             .overlay(alignment: .bottom) {
                 if let toast {
@@ -86,18 +86,19 @@ struct UserProfileView: View {
     // MARK: - Header
 
     /// Clean centered avatar on the solid background, wrapped in the
-    /// equipped decoration frame.
+    /// equipped decoration frame (premium particle effects included).
     private var header: some View {
         VStack(spacing: 10) {
-            AvatarFrameOverlayView(
+            AnimatedAvatarView(
+                name: me.name,
+                seed: me.id,
+                avatarFileName: me.avatarFileName,
+                size: 108,
                 frame: AvatarFrameManager.activeFrame(
                     selectedID: me.selectedFrameId,
                     level: UserLevelManager.shared.currentLevel
-                ),
-                avatarSize: 108
-            ) {
-                avatar
-            }
+                )
+            )
             .onTapGesture {
                 withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
                     photoExpanded = true
@@ -107,7 +108,10 @@ struct UserProfileView: View {
 
             HStack(spacing: 6) {
                 levelBadge
-                NicknameText(name: me.name, style: NicknameStyleManager.shared.activeID)
+                AnimatedNicknameView(
+                    name: me.name,
+                    style: NicknameStyleManager.shared.activeID
+                )
                 if me.isVerified {
                     Image(systemName: "checkmark.seal.fill")
                         .font(.title3)
@@ -165,18 +169,6 @@ struct UserProfileView: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Level \(levels.currentLevel), open rating")
-    }
-
-    /// The avatar carries the matched geometry id only while collapsed.
-    private var avatar: some View {
-        ZStack {
-            if photoExpanded {
-                AvatarView(title: me.name, seed: me.id, size: 108, isOnline: true, fileName: me.avatarFileName)
-            } else {
-                AvatarView(title: me.name, seed: me.id, size: 108, isOnline: true, fileName: me.avatarFileName)
-                    .matchedGeometryEffect(id: "my-avatar", in: avatarNamespace)
-            }
-        }
     }
 
     // MARK: - Expanded photo (Telegram-style)

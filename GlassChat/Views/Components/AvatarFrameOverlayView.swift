@@ -30,7 +30,22 @@ struct AvatarFrameOverlayView<Content: View>: View {
 
     @ViewBuilder
     private func ring(for frame: AvatarFrame) -> some View {
-        if frame.isAnimated && !reduceMotion {
+        if PremiumCosmeticsManager.premiumFrameIDs.contains(frame.id) {
+            if frame.id == "angelicWings" {
+                // Wings render behind the avatar inside AnimatedAvatarView.
+                EmptyView()
+            } else if !reduceMotion {
+                TimelineView(.animation) { context in
+                    PremiumFrameEffectLayer(
+                        frame: frame,
+                        size: avatarSize + 12,
+                        time: context.date.timeIntervalSinceReferenceDate
+                    )
+                }
+            } else {
+                StaticFrameRing(frame: frame, lineWidth: lineWidth)
+            }
+        } else if frame.isAnimated && !reduceMotion {
             TimelineView(.animation) { context in
                 AnimatedFrameRing(
                     frame: frame,

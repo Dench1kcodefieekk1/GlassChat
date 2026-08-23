@@ -4,11 +4,17 @@ import XCTest
 @MainActor
 final class NicknameStyleManagerTests: XCTestCase {
     func testRequiredLevelsMatchSpec() {
+        XCTAssertEqual(NicknameStyleInfo.all.count, 10)
         XCTAssertEqual(NicknameStyleManager.requiredLevel(for: .standard), 1)
         XCTAssertEqual(NicknameStyleManager.requiredLevel(for: .neonViolet), 10)
         XCTAssertEqual(NicknameStyleManager.requiredLevel(for: .cyberGold), 25)
         XCTAssertEqual(NicknameStyleManager.requiredLevel(for: .rainbow), 50)
         XCTAssertEqual(NicknameStyleManager.requiredLevel(for: .fireCrown), 100)
+        XCTAssertEqual(NicknameStyleManager.requiredLevel(for: .burningText), 75)
+        XCTAssertEqual(NicknameStyleManager.requiredLevel(for: .rainbowWave), 75)
+        XCTAssertEqual(NicknameStyleManager.requiredLevel(for: .staticGlitch), 75)
+        XCTAssertEqual(NicknameStyleManager.requiredLevel(for: .neonPulse), 75)
+        XCTAssertEqual(NicknameStyleManager.requiredLevel(for: .galaxyText), 150)
     }
 
     func testLockedStyleCannotBeSelected() {

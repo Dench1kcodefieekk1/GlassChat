@@ -15,9 +15,10 @@ struct AvatarFrame: Identifiable, Equatable {
 
 @MainActor
 enum AvatarFrameManager {
-    /// 20 distinct frames: ten static (levels 5–40) and ten animated
-    /// (levels 50–250).
-    static let catalog: [AvatarFrame] = [
+    /// All decorations: the base 20 frames plus the premium Nitro-grade set.
+    static let catalog: [AvatarFrame] = baseFrames + PremiumCosmeticsManager.premiumFrames
+
+    private static let baseFrames: [AvatarFrame] = [
         // Static
         AvatarFrame(id: "neonRing", name: "Неоновое кольцо", isAnimated: false, requiredLevel: 5,
                     glowColors: [Color(red: 0.24, green: 0.48, blue: 1.0), Color(red: 0.39, green: 0.83, blue: 1.0)]),

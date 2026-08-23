@@ -16,27 +16,29 @@ struct MessageRow: View {
             if isOwn { Spacer(minLength: 48) }
 
             if showSenderName {
-                AvatarFrameOverlayView(
+                AnimatedAvatarView(
+                    name: store.displayName(of: message),
+                    seed: message.senderID,
+                    avatarFileName: store.user(id: message.senderID)?.avatarFileName,
+                    size: 26,
                     frame: AvatarFrameManager.activeFrame(
                         selectedID: store.user(id: message.senderID)?.selectedFrameId,
                         level: UserLevelManager.shared.currentLevel
-                    ),
-                    avatarSize: 26
-                ) {
-                    AvatarView(
-                        title: store.displayName(of: message),
-                        seed: message.senderID,
-                        size: 26
                     )
-                }
+                )
             }
 
             VStack(alignment: isOwn ? .trailing : .leading, spacing: 4) {
                 if showSenderName {
-                    Text(store.firstName(of: message))
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.tint)
-                        .padding(.leading, 12)
+                    AnimatedNicknameView(
+                        name: store.firstName(of: message),
+                        style: message.senderID == store.currentUserID
+                            ? NicknameStyleManager.shared.activeID
+                            : .standard,
+                        font: .caption.weight(.semibold)
+                    )
+                    .foregroundStyle(.tint)
+                    .padding(.leading, 12)
                 }
                 bubble
                 reactionsRow

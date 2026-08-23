@@ -9,6 +9,12 @@ enum NicknameStyleID: String, CaseIterable, Identifiable {
     case cyberGold
     case rainbow
     case fireCrown
+    // Premium shader-style effects (rendered by AnimatedNicknameView)
+    case burningText
+    case rainbowWave
+    case staticGlitch
+    case neonPulse
+    case galaxyText
 
     var id: String { rawValue }
 }
@@ -23,7 +29,12 @@ struct NicknameStyleInfo: Identifiable {
         NicknameStyleInfo(id: .neonViolet, title: "Neon Violet", requiredLevel: 10),
         NicknameStyleInfo(id: .cyberGold, title: "Cyber Gold", requiredLevel: 25),
         NicknameStyleInfo(id: .rainbow, title: "Радужный", requiredLevel: 50),
-        NicknameStyleInfo(id: .fireCrown, title: "Fire & Crown", requiredLevel: 100)
+        NicknameStyleInfo(id: .fireCrown, title: "Fire & Crown", requiredLevel: 100),
+        NicknameStyleInfo(id: .burningText, title: "BURNING TEXT", requiredLevel: 75),
+        NicknameStyleInfo(id: .rainbowWave, title: "RAINBOW WAVE", requiredLevel: 75),
+        NicknameStyleInfo(id: .staticGlitch, title: "STATIC GLITCH", requiredLevel: 75),
+        NicknameStyleInfo(id: .neonPulse, title: "NEON PULSE", requiredLevel: 75),
+        NicknameStyleInfo(id: .galaxyText, title: "GALAXY TEXT", requiredLevel: 150)
     ]
 }
 
@@ -71,6 +82,8 @@ final class NicknameStyleManager {
         case .cyberGold: return 25
         case .rainbow: return 50
         case .fireCrown: return 100
+        case .burningText, .rainbowWave, .staticGlitch, .neonPulse: return 75
+        case .galaxyText: return 150
         }
     }
 
