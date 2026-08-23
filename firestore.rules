@@ -1,0 +1,42 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // --- Helper Functions ---
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isSender() {
+      return isAuthenticated() && request.auth.uid == request.resource.data.senderId;
+    }
+
+    // --- User Profiles & Cosmetic Inventory ---
+    match /users/{userId} {
+      // Any authenticated user can search/view profiles
+      allow read: if isAuthenticated();
+      // Users can only create or modify their own profile/cosmetics
+      allow create, update: if isOwner(userId);
+      allow delete: if false; // Profiles cannot be hard-deleted via client
+    }
+
+    // --- Direct Chats & Group Messaging ---
+    match /chats/{chatId} {
+      allow read, write: if isAuthenticated();
+
+      // Messages Sub-collection
+      match /messages/{messageId} {
+        allow read: if isAuthenticated();
+        // User must be authenticated and set themselves as sender
+        allow create: if isAuthenticated() && request.resource.data.senderId == request.auth.uid;
+        // Only the original author can edit or delete their message
+        allow update, delete: if isAuthenticated() && resource.data.senderId == request.auth.uid;
+      }
+    }
+  }
+}
