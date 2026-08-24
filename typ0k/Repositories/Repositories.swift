@@ -38,12 +38,6 @@ protocol AuthenticationService {
     func signInLocally()
 }
 
-@MainActor
-protocol PresenceService {
-    func start()
-    func stop()
-}
-
 // MARK: - Local implementations backed by DataStore / MediaService
 
 extension DataStore: ChatRepository {
@@ -107,22 +101,5 @@ extension MediaService: MediaRepository {
 
     func deleteAll() {
         MediaService.deleteAll()
-    }
-}
-
-@MainActor
-final class LocalPresenceService: PresenceService {
-    private let store: DataStore
-
-    init(store: DataStore) {
-        self.store = store
-    }
-
-    func start() {
-        PresenceSimulator.start(store: store)
-    }
-
-    func stop() {
-        PresenceSimulator.stop()
     }
 }
