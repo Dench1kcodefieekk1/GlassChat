@@ -82,8 +82,16 @@ service cloud.firestore {
         // set from Auth.auth().currentUser.uid in ChatService).
         allow create: if writesSelfAsSender();
 
-        // Only the original author may edit or delete their message.
-        allow update, delete: if isAuthenticated()
+        // The original author may edit any field. The recipient may touch
+        // ONLY `status` (read receipts: "sent" -> "read"), which is what
+        // powers the sender's ✓ -> ✓✓ transition.
+        allow update: if isAuthenticated()
+          && (resource.data.senderId == request.auth.uid
+              || request.resource.data.diff(resource.data)
+                   .affectedKeys().hasOnly(['status']));
+
+        // Only the original author may delete their message.
+        allow delete: if isAuthenticated()
           && resource.data.senderId == request.auth.uid;
       }
     }

@@ -44,6 +44,7 @@ struct RemoteMessage: Identifiable, Hashable {
 struct RemoteUserProfile: Hashable {
     let displayName: String
     let username: String
+    let bio: String
 }
 
 /// Real-time 1-on-1 messaging engine on Firestore.
@@ -234,11 +235,38 @@ final class ChatService {
             guard let data = snapshot.data() else { return nil }
             return RemoteUserProfile(
                 displayName: (data["displayName"] as? String) ?? "",
-                username: (data["username"] as? String) ?? ""
+                username: (data["username"] as? String) ?? "",
+                bio: (data["bio"] as? String) ?? ""
             )
         } catch {
             print("[ChatService] Profile fetch failed for \(uid): \(error.localizedDescription)")
             return nil
+        }
+    }
+
+    /// Read receipts: flips `status` to `"read"` on every incoming message
+    /// the signed-in user hasn't read yet. Runs as a single batch write; the
+    /// sender's snapshot listener picks the change up in real time and their
+    /// checkmarks upgrade from ✓ to ✓✓. Best-effort — failures only log.
+    func markMessagesRead(chatID: String) async {
+        guard isFirebaseReady, let uid = currentUID, chatID.contains("_") else { return }
+        do {
+            let snapshot = try await db.collection("chats")
+                .document(chatID)
+                .collection("messages")
+                .whereField("senderId", isNotEqualTo: uid)
+                .getDocuments()
+            let unread = snapshot.documents.filter {
+                ($0.data()["status"] as? String) != "read"
+            }
+            guard !unread.isEmpty else { return }
+            let batch = db.batch()
+            for document in unread {
+                batch.updateData(["status": "read"], forDocument: document.reference)
+            }
+            try await batch.commit()
+        } catch {
+            print("[ChatService] Mark messages read failed: \(error.localizedDescription)")
         }
     }
 }

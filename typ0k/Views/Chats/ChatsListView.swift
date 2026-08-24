@@ -9,6 +9,42 @@ struct ChatsListView: View {
     private var matches: [Message] { model.messageMatches(in: store) }
 
     var body: some View {
+        // Search field and compose button only exist on the root list —
+        // removing them while a chat is pushed stops their chrome from
+        // bleeding through ChatView's navigation bar during transitions.
+        Group {
+            if model.path.isEmpty {
+                rootContent
+                    .searchable(text: $model.searchText, prompt: "Search chats and messages")
+            } else {
+                rootContent
+            }
+        }
+        .navigationTitle("Chats")
+        .task {
+            ChatService.shared.startChatListListener()
+        }
+        .toolbar {
+            if model.path.isEmpty {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        model.showCompose = true
+                    } label: {
+                        Image(systemName: "square.and.pencil")
+                    }
+                    .accessibilityLabel("New message")
+                }
+            }
+        }
+        .sheet(isPresented: $model.showCompose) {
+            ComposeView { chatID in
+                model.showCompose = false
+                appState.pendingOpenChatID = chatID
+            }
+        }
+    }
+
+    private var rootContent: some View {
         Group {
             if chats.isEmpty && !isSearching {
                 emptyState
@@ -16,27 +52,6 @@ struct ChatsListView: View {
                 ContentUnavailableView.search(text: model.searchText)
             } else {
                 list
-            }
-        }
-        .navigationTitle("Chats")
-        .searchable(text: $model.searchText, prompt: "Search chats and messages")
-        .task {
-            ChatService.shared.startChatListListener()
-        }
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    model.showCompose = true
-                } label: {
-                    Image(systemName: "square.and.pencil")
-                }
-                .accessibilityLabel("New message")
-            }
-        }
-        .sheet(isPresented: $model.showCompose) {
-            ComposeView { chatID in
-                model.showCompose = false
-                appState.pendingOpenChatID = chatID
             }
         }
     }

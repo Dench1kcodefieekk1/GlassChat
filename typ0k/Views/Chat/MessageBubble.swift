@@ -189,14 +189,14 @@ struct MessageRow: View {
         case .sending:
             Image(systemName: "clock")
                 .font(.caption2)
-        case .sent:
+        case .sent, .delivered:
+            // ✓ — delivered but not yet read by the counterpart.
             Image(systemName: "checkmark")
                 .font(.caption2)
-        case .delivered:
-            Image(systemName: "checkmark.circle")
-                .font(.caption2)
+                .accessibilityLabel("Sent")
         case .read:
-            Image(systemName: "checkmark.circle.fill")
+            // ✓✓ — the counterpart read the message (Firestore receipt).
+            DoubleCheckmark()
                 .font(.caption2)
         case .failed:
             Image(systemName: "exclamationmark.triangle.fill")
@@ -349,6 +349,22 @@ extension MessageRow: Equatable {
         lhs.message == rhs.message
             && lhs.localUserID == rhs.localUserID
             && lhs.firebaseUID == rhs.firebaseUID
+    }
+}
+
+// MARK: - Read receipt glyph
+
+/// Telegram-style read indicator: two overlapping checkmarks (✓✓). Rendered
+/// on outgoing messages whose Firestore `status` flipped to `"read"`.
+struct DoubleCheckmark: View {
+    var body: some View {
+        ZStack {
+            Image(systemName: "checkmark")
+                .offset(x: -2.4)
+            Image(systemName: "checkmark")
+                .offset(x: 2.4)
+        }
+        .accessibilityLabel("Read")
     }
 }
 

@@ -204,7 +204,9 @@ final class ChatViewModel {
     /// Local messages overlaid with the live Firestore snapshot stream.
     /// Both copies of an outgoing message share one ID, so merging dedupes
     /// automatically; incoming messages from the counterpart arrive here in
-    /// real time without any manual refresh.
+    /// real time without any manual refresh. Read receipts flow the other
+    /// way: when the remote copy is `"read"`, the locally cached outgoing
+    /// message inherits that status so the ✓✓ renders immediately.
     func mergedMessages() -> [Message] {
         let local = store.sortedMessages(for: chatID)
         guard isFirestoreChat else { return local }
@@ -212,14 +214,22 @@ final class ChatViewModel {
         guard !remote.isEmpty else { return local }
 
         var byID: [String: Message] = Dictionary(uniqueKeysWithValues: local.map { ($0.id, $0) })
-        for entry in remote where byID[entry.id] == nil {
+        for entry in remote {
+            let remoteStatus = MessageStatus(rawValue: entry.status) ?? .sent
+            if var existing = byID[entry.id] {
+                if remoteStatus == .read && existing.status != .read {
+                    existing.status = .read
+                    byID[entry.id] = existing
+                }
+                continue
+            }
             byID[entry.id] = Message(
                 id: entry.id,
                 chatID: chatID,
                 senderID: entry.senderId,
                 text: entry.text,
                 createdAt: entry.timestamp ?? Date(),
-                status: MessageStatus(rawValue: entry.status) ?? .sent
+                status: remoteStatus
             )
         }
         return byID.values.sorted { $0.createdAt < $1.createdAt }
@@ -244,6 +254,9 @@ final class ChatViewModel {
         store.markAllRead(chatID)
         ChatService.shared.observeMessages(in: chatID)
         Task { await ChatService.shared.markRead(chatID: chatID) }
+        if isFirestoreChat {
+            Task { await ChatService.shared.markMessagesRead(chatID: chatID) }
+        }
         fetchRemoteProfileIfNeeded()
         PresenceService.shared.observePresence(of: counterpartUID)
     }
@@ -278,8 +291,22 @@ final class ChatViewModel {
     }
 
     func markReadIfActive() {
-        if store.activeChatID == chatID {
-            store.markAllRead(chatID)
+        guard store.activeChatID == chatID else { return }
+        store.markAllRead(chatID)
+        if isFirestoreChat, hasUnreadIncoming {
+            Task { await ChatService.shared.markMessagesRead(chatID: chatID) }
+        }
+    }
+
+    /// True when the merged history contains unread incoming messages —
+    /// used to avoid receipt writes when only outgoing traffic changed.
+    private var hasUnreadIncoming: Bool {
+        let firebaseUID = AuthManager.shared.currentUID
+        return mergedMessages().contains { message in
+            !message.isDeleted
+                && message.senderID != store.currentUserID
+                && message.senderID != firebaseUID
+                && message.status != .read
         }
     }
 

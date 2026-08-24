@@ -29,6 +29,9 @@ struct ProfileView: View {
                         }
                         .padding()
                     }
+                } else if model.isLoading {
+                    profileSkeleton
+                        .padding(.top, 8)
                 } else {
                     ContentUnavailableView("User not found", systemImage: "person.crop.circle.badge.exclamationmark")
                         .padding(.top, 60)
@@ -37,6 +40,8 @@ struct ProfileView: View {
             .background(Color(uiColor: .systemGroupedBackground))
             .navigationTitle("Profile")
             .navigationBarTitleDisplayMode(.inline)
+            .task { model.loadIfNeeded() }
+            .onChange(of: store.currentUserID) { model.resetForAccountSwitch() }
             .fullScreenCover(isPresented: $showCall) {
                 SimulatedCallView(user: model.user)
             }
@@ -84,6 +89,47 @@ struct ProfileView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 8)
+    }
+
+    /// Redacted placeholder rendered while `users/{uid}` is being fetched.
+    private var profileSkeleton: some View {
+        VStack(spacing: 20) {
+            VStack(spacing: 10) {
+                Circle()
+                    .fill(Color(uiColor: .tertiarySystemFill))
+                    .frame(width: 108, height: 108)
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .fill(Color(uiColor: .tertiarySystemFill))
+                    .frame(width: 160, height: 22)
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .fill(Color(uiColor: .tertiarySystemFill))
+                    .frame(width: 120, height: 16)
+            }
+            .frame(maxWidth: .infinity)
+
+            VStack(spacing: 0) {
+                ForEach(0..<3, id: \.self) { _ in
+                    HStack(spacing: 12) {
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .fill(Color(uiColor: .tertiarySystemFill))
+                            .frame(width: 30, height: 30)
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .fill(Color(uiColor: .tertiarySystemFill))
+                            .frame(width: 180, height: 18)
+                        Spacer()
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                }
+            }
+            .background(
+                Color(uiColor: .secondarySystemGroupedBackground),
+                in: RoundedRectangle(cornerRadius: 16, style: .continuous)
+            )
+            .padding(.horizontal)
+        }
+        .redacted(reason: .placeholder)
+        .accessibilityLabel("Loading profile")
     }
 
     /// The avatar participates in the hero zoom transition only while the
