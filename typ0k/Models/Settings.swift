@@ -243,6 +243,9 @@ struct AppSettings: Codable, Equatable {
 
     // Privacy
     var showLastSeen: Bool = true
+    /// Tri-state replacement for `showLastSeen`: who may see this user's
+    /// online status and last-seen timestamp (mirrored to Firestore).
+    var lastSeenPrivacy: LastSeenPrivacy = .everyone
     var showProfilePhoto: Bool = true
     var showPhoneNumber: Bool = true
     var readReceipts: Bool = true
@@ -271,7 +274,7 @@ struct AppSettings: Codable, Equatable {
         case linkPreviews, autoPlayVideos
         case notifyMessages, notifySounds, notificationSound, notifyPreview
         case notifyMentions, notifyReactions, badgeCount, badgeIncludeMuted
-        case showLastSeen, showProfilePhoto, showPhoneNumber, readReceipts
+        case showLastSeen, lastSeenPrivacy, showProfilePhoto, showPhoneNumber, readReceipts
         case allowCalls, blockedUserIDs
         case passcodeEnabled, passcodeHash, autoLock
         case twoStepEnabled, twoStepPasswordHash, recoveryEmail
@@ -304,6 +307,8 @@ struct AppSettings: Codable, Equatable {
         badgeCount = try container.decodeIfPresent(Bool.self, forKey: .badgeCount) ?? true
         badgeIncludeMuted = try container.decodeIfPresent(Bool.self, forKey: .badgeIncludeMuted) ?? false
         showLastSeen = try container.decodeIfPresent(Bool.self, forKey: .showLastSeen) ?? true
+        lastSeenPrivacy = try container.decodeIfPresent(LastSeenPrivacy.self, forKey: .lastSeenPrivacy)
+            ?? (showLastSeen ? .everyone : .nobody)
         showProfilePhoto = try container.decodeIfPresent(Bool.self, forKey: .showProfilePhoto) ?? true
         showPhoneNumber = try container.decodeIfPresent(Bool.self, forKey: .showPhoneNumber) ?? true
         readReceipts = try container.decodeIfPresent(Bool.self, forKey: .readReceipts) ?? true

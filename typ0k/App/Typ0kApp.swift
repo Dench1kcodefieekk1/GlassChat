@@ -21,6 +21,7 @@ struct Typ0kApp: App {
     @UIApplicationDelegateAdaptor(FirebaseAppDelegate.self) private var appDelegate
     @AppStorage("isLoggedIn") private var isLoggedIn = false
     @State private var dependencies = AppDependencies()
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some Scene {
         WindowGroup {
@@ -38,6 +39,9 @@ struct Typ0kApp: App {
             .environment(dependencies.appState)
             .tint(dependencies.store.settings.accent.color)
             .preferredColorScheme(dependencies.store.settings.appearance.colorScheme)
+            .onChange(of: scenePhase, initial: true) { _, phase in
+                PresenceService.shared.setScenePhase(phase)
+            }
         }
     }
 }

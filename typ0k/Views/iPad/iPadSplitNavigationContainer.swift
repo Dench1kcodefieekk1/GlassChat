@@ -66,6 +66,12 @@ struct IPadSplitNavigationContainer: View {
         .onChange(of: appState.iPadDestination) { _, destination in
             syncSidebar(with: destination)
         }
+        .onChange(of: store.currentUserID) {
+            // Account switch: drop the detail pane so any open chat re-binds
+            // its view model and message ownership to the new user.
+            appState.iPadDestination = .emptyState
+            selection = nil
+        }
         .onAppear {
             syncSidebar(with: appState.iPadDestination)
         }

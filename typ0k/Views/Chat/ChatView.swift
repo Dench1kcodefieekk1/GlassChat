@@ -15,7 +15,10 @@ struct ChatView: View {
     }
 
     var body: some View {
-        messageList
+        // Rows are built once per body evaluation and shared by the list,
+        // the scroll targets and the count observer — no redundant merges.
+        let rows = model.rows()
+        return messageList(rows: rows)
             .safeAreaInset(edge: .top, spacing: 0) {
                 chatHeader
             }
@@ -23,7 +26,18 @@ struct ChatView: View {
             .toolbar(.hidden, for: .tabBar)
             .navigationBarBackButtonHidden(false)
             .toolbarBackground(.visible, for: .navigationBar)
-            .background(ChatWallpaperView(wallpaper: store.settings.wallpaper).ignoresSafeArea())
+            .background {
+                // Opaque base layer under the wallpaper and every Liquid
+                // Glass surface: during the interactive edge swipe-back the
+                // chat screen is composited over the chat list, and without
+                // this solid backing the list's search bar / FABs bleed
+                // through the translucent glass header mid-gesture.
+                ZStack {
+                    Color(uiColor: .systemBackground)
+                    ChatWallpaperView(wallpaper: store.settings.wallpaper)
+                }
+                .ignoresSafeArea()
+            }
             .onTapGesture {
                 UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
             }
@@ -33,7 +47,7 @@ struct ChatView: View {
                 guard let pillID, verification.celebrationChatID == model.chatID else { return }
                 model.triggerConfetti(for: pillID)
             }
-            .onChange(of: model.mergedMessages().count) { oldValue, newValue in
+            .onChange(of: rows.count) { oldValue, newValue in
                 model.markReadIfActive()
                 // Auto-scroll to the newest message whenever one is appended
                 // (sent or received).
@@ -171,7 +185,7 @@ struct ChatView: View {
                 seed: model.chatID,
                 symbol: model.isGroup ? "person.3.fill" : nil,
                 size: 36,
-                isOnline: model.otherUser?.isOnline == true
+                isOnline: model.isCounterpartOnline
             )
             VStack(alignment: .leading, spacing: 1) {
                 HStack(spacing: 4) {
@@ -252,11 +266,11 @@ struct ChatView: View {
 
     // MARK: - Message list
 
-    private var messageList: some View {
+    private func messageList(rows: [ChatRowItem]) -> some View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(spacing: 3) {
-                    ForEach(model.rows()) { item in
+                    ForEach(rows) { item in
                         row(for: item)
                             .id(item.id)
                     }
@@ -282,28 +296,28 @@ struct ChatView: View {
             }
             .overlay(alignment: .bottom) {
                 if model.pendingIncoming > 0 && !model.isNearBottom {
-                    newMessagesButton(proxy: proxy)
+                    newMessagesButton(rows: rows, proxy: proxy)
                         .padding(.bottom, 92)
                         .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
             }
             .animation(.spring(response: 0.3, dampingFraction: 0.8), value: model.pendingIncoming)
             .onChange(of: model.scrollTrigger) {
-                scrollToBottom(proxy: proxy, animated: true)
+                scrollToBottom(rows: rows, proxy: proxy, animated: true)
             }
             .onChange(of: model.sendScrollTrigger) {
-                scrollToBottom(proxy: proxy, animated: true)
+                scrollToBottom(rows: rows, proxy: proxy, animated: true)
             }
             .onAppear {
                 DispatchQueue.main.async {
-                    scrollToBottom(proxy: proxy, animated: false)
+                    scrollToBottom(rows: rows, proxy: proxy, animated: false)
                 }
             }
         }
     }
 
-    private func scrollToBottom(proxy: ScrollViewProxy, animated: Bool) {
-        guard let last = model.rows().last else { return }
+    private func scrollToBottom(rows: [ChatRowItem], proxy: ScrollViewProxy, animated: Bool) {
+        guard let last = rows.last else { return }
         if animated {
             withAnimation(.spring(duration: 0.35)) {
                 proxy.scrollTo(last.id, anchor: .bottom)
@@ -313,10 +327,10 @@ struct ChatView: View {
         }
     }
 
-    private func newMessagesButton(proxy: ScrollViewProxy) -> some View {
+    private func newMessagesButton(rows: [ChatRowItem], proxy: ScrollViewProxy) -> some View {
         Button {
             model.pendingIncoming = 0
-            scrollToBottom(proxy: proxy, animated: true)
+            scrollToBottom(rows: rows, proxy: proxy, animated: true)
         } label: {
             HStack(spacing: 6) {
                 Image(systemName: "arrow.down")
@@ -349,14 +363,23 @@ struct ChatView: View {
                 }
                 .transition(.scale(scale: 0.7).combined(with: .opacity))
             } else {
-                MessageRow(message: message, model: model)
-                    .transition(.asymmetric(
-                        insertion: .opacity
-                            .combined(with: .scale(scale: 0.96, anchor: .bottom))
-                            .combined(with: .offset(y: 8)),
-                        removal: .opacity
-                            .combined(with: .scale(scale: 0.96, anchor: .bottom))
-                    ))
+                // `localUserID` + `firebaseUID` are read in this body, so an
+                // account switch (either identity changing) re-instantiates
+                // every row and ownership re-resolves against the new session.
+                MessageRow(
+                    message: message,
+                    model: model,
+                    localUserID: store.currentUserID,
+                    firebaseUID: AuthManager.shared.currentUID
+                )
+                .equatable()
+                .transition(.asymmetric(
+                    insertion: .opacity
+                        .combined(with: .scale(scale: 0.96, anchor: .bottom))
+                        .combined(with: .offset(y: 8)),
+                    removal: .opacity
+                        .combined(with: .scale(scale: 0.96, anchor: .bottom))
+                ))
             }
         }
     }

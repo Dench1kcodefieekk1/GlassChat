@@ -5,7 +5,8 @@ rules_version = '2';
 //
 //   users/{userId}            <- User (Models/User.swift) + AuthManager profile sync
 //     uid, email, displayName, username, usernameLower, phone, createdAt,
-//     selectedFrameId, nicknameStyleId
+//     selectedFrameId, nicknameStyleId,
+//     isOnline, lastSeen, lastSeenPrivacy   (PresenceService.swift)
 //
 //   chats/{chatId}            <- RemoteChat (Services/ChatService.swift)
 //     participants: [String], lastMessage: String,

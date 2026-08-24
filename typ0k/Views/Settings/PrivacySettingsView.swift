@@ -6,8 +6,20 @@ struct PrivacySettingsView: View {
     var body: some View {
         @Bindable var store = store
         return List {
-            Section("Privacy") {
-                Toggle("Show Last Seen", isOn: $store.settings.showLastSeen)
+            Section {
+                Picker("Last Seen & Online", selection: $store.settings.lastSeenPrivacy) {
+                    ForEach(LastSeenPrivacy.allCases) { privacy in
+                        Text(privacy.label).tag(privacy)
+                    }
+                }
+                .pickerStyle(.menu)
+            } header: {
+                Text("Privacy")
+            } footer: {
+                Text("Who can see your online status and last seen time. \"My Contacts\" only reveals your status to people you share it back with.")
+            }
+
+            Section {
                 Toggle("Show Profile Photo", isOn: $store.settings.showProfilePhoto)
                 Toggle("Show Phone Number", isOn: $store.settings.showPhoneNumber)
                 Toggle("Read Receipts", isOn: $store.settings.readReceipts)
@@ -59,6 +71,10 @@ struct PrivacySettingsView: View {
         .navigationTitle("Privacy")
         .navigationBarTitleDisplayMode(.inline)
         .autosaveSettings(store)
+        .onChange(of: store.settings.lastSeenPrivacy) { _, newValue in
+            store.settings.showLastSeen = newValue != .nobody
+            PresenceService.shared.publishPrivacy(newValue)
+        }
     }
 }
 

@@ -128,6 +128,11 @@ final class ChatViewModel {
     var subtitle: String {
         if isTyping { return "typing…" }
         if isGroup { return "\(chat?.memberIDs.count ?? 0) members" }
+        // Live Firestore presence (users/{counterpartUID}) wins whenever the
+        // snapshot is attached; local demo users fall back to stored state.
+        if let presence = PresenceService.shared.observedPresence {
+            return statusLabel(for: presence)
+        }
         if let user = otherUser {
             if user.isOnline { return "online" }
             guard store.settings.showLastSeen else { return "" }
@@ -138,6 +143,38 @@ final class ChatViewModel {
             return "@\(remoteProfile.username)"
         }
         return ""
+    }
+
+    /// Header avatar dot: only shown when the counterpart's privacy setting
+    /// allows the current user to see their online state.
+    var isCounterpartOnline: Bool {
+        if let presence = PresenceService.shared.observedPresence {
+            return canSeeStatus(privacy: presence.lastSeenPrivacy) && presence.isOnline
+        }
+        return otherUser?.isOnline == true
+    }
+
+    private func statusLabel(for presence: RemotePresence) -> String {
+        guard canSeeStatus(privacy: presence.lastSeenPrivacy) else {
+            return "last seen recently"
+        }
+        if presence.isOnline { return "online" }
+        if let lastSeen = presence.lastSeen { return lastSeen.lastSeenLabel }
+        return "last seen recently"
+    }
+
+    /// Enforces the counterpart's privacy choice. "Everyone" always reveals
+    /// status; "Nobody" always masks it; "My Contacts" reveals it only when
+    /// the viewer shares their own status back (Telegram-style reciprocity).
+    private func canSeeStatus(privacy: LastSeenPrivacy) -> Bool {
+        switch privacy {
+        case .everyone:
+            return true
+        case .nobody:
+            return false
+        case .myContacts:
+            return store.settings.lastSeenPrivacy != .nobody
+        }
     }
 
     func rows() -> [ChatRowItem] {
@@ -208,6 +245,7 @@ final class ChatViewModel {
         ChatService.shared.observeMessages(in: chatID)
         Task { await ChatService.shared.markRead(chatID: chatID) }
         fetchRemoteProfileIfNeeded()
+        PresenceService.shared.observePresence(of: counterpartUID)
     }
 
     /// One-shot fetch of the counterpart's `users/{uid}` document so the
@@ -236,6 +274,7 @@ final class ChatViewModel {
         if ChatService.shared.activeChatID == chatID {
             ChatService.shared.stopMessageListener()
         }
+        PresenceService.shared.observePresence(of: nil)
     }
 
     func markReadIfActive() {

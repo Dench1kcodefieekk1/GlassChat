@@ -1,4 +1,5 @@
 import Foundation
+import Observation
 import FirebaseCore
 import FirebaseAuth
 import FirebaseFirestore
@@ -31,6 +32,7 @@ enum AuthOutcome {
 /// All entry points fail soft when Firebase is not configured so the local
 /// prototype flow keeps working offline.
 @MainActor
+@Observable
 final class AuthManager {
     static let shared = AuthManager()
 
@@ -42,8 +44,29 @@ final class AuthManager {
         FirebaseApp.app() != nil
     }
 
+    /// SwiftUI-tracked mirror of the signed-in UID. Updated by the Firebase
+    /// auth state listener (`startObservingAuthState`) so every view reading
+    /// `currentUID` re-renders the moment an account switch lands.
+    private(set) var observedUID: String?
+
+    private var authListener: AuthStateDidChangeListenerHandle?
+
     var currentUID: String? {
-        Auth.auth().currentUser?.uid
+        observedUID ?? Auth.auth().currentUser?.uid
+    }
+
+    /// Registers the Firebase auth state listener exactly once. From this
+    /// point on `observedUID` (and therefore `currentUID`) tracks session
+    /// changes live — message ownership, chat bindings and presence all
+    /// recompute against the newly authenticated user.
+    func startObservingAuthState() {
+        guard isFirebaseReady, authListener == nil else { return }
+        observedUID = Auth.auth().currentUser?.uid
+        authListener = Auth.auth().addStateDidChangeListener { [weak self] _, user in
+            Task { @MainActor in
+                self?.observedUID = user?.uid
+            }
+        }
     }
 
     // MARK: - Registration & login

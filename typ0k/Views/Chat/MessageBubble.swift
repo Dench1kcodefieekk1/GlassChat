@@ -5,8 +5,20 @@ struct MessageRow: View {
     @Environment(DataStore.self) private var store
     let message: Message
     @Bindable var model: ChatViewModel
+    /// Sender identity captured at render time — never cached in the message
+    /// model. `localUserID` covers local/demo sends, `firebaseUID` covers
+    /// Firestore-backed chats whose `senderID` is the Firebase Auth UID.
+    let localUserID: String
+    let firebaseUID: String?
 
-    private var isOwn: Bool { message.senderID == store.currentUserID }
+    /// Ownership is resolved strictly against the active session on every
+    /// render, so switching accounts instantly flips bubble alignment.
+    private var isFromCurrentUser: Bool {
+        if message.senderID == localUserID { return true }
+        if let firebaseUID, message.senderID == firebaseUID { return true }
+        return false
+    }
+    private var isOwn: Bool { isFromCurrentUser }
     private var showSenderName: Bool { model.isGroup && !isOwn }
 
     static let quickReactions = ["❤️", "👍", "😂", "🔥", "😮", "😢"]
@@ -32,7 +44,7 @@ struct MessageRow: View {
                 if showSenderName {
                     AnimatedNicknameView(
                         name: store.firstName(of: message),
-                        style: message.senderID == store.currentUserID
+                        style: isOwn
                             ? NicknameStyleManager.shared.activeID
                             : .standard,
                         font: .caption.weight(.semibold)
@@ -322,6 +334,21 @@ struct MessageRow: View {
                 model.delete(message)
             }
         }
+    }
+}
+
+// MARK: - Row equatability (scroll performance)
+
+extension MessageRow: Equatable {
+    /// Rows re-render only when the message payload or the active sender
+    /// identity changes. Observable sub-dependencies (audio playback, store
+    /// settings) still invalidate their own bodies directly, so skipping the
+    /// row body here is safe and removes redundant re-evaluations while
+    /// scrolling long histories.
+    static func == (lhs: MessageRow, rhs: MessageRow) -> Bool {
+        lhs.message == rhs.message
+            && lhs.localUserID == rhs.localUserID
+            && lhs.firebaseUID == rhs.firebaseUID
     }
 }
 

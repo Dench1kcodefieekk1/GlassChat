@@ -165,6 +165,7 @@ struct SettingsHomeView: View {
                 try await AuthManager.shared.switchSession(toPhone: phone)
                 store.updateCurrentUserPhone(phone)
                 ChatService.shared.refreshForAccountSwitch()
+                PresenceService.shared.refreshForAccountSwitch()
             } catch {
                 print("[Auth] Account switch failed: \(error.localizedDescription)")
             }

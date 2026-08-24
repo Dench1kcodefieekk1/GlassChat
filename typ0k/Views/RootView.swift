@@ -34,6 +34,9 @@ struct RootView: View {
             }
         }
         .task {
+            AuthManager.shared.startObservingAuthState()
+            PresenceService.shared.start()
+            PresenceService.shared.publishPrivacy(store.settings.lastSeenPrivacy)
             if AuthManager.shared.currentUID != nil {
                 store.clearAccountChats()
             }
@@ -74,6 +77,11 @@ struct ChatsTabView: View {
                 }
         }
         .background(Color(uiColor: .systemBackground).ignoresSafeArea())
+        .onChange(of: store.currentUserID) {
+            // Account switch: invalidate every pushed chat so its view model
+            // and bubble ownership re-bind to the new authenticated user.
+            model.path.removeAll()
+        }
         .onChange(of: appState.pendingOpenChatID) { _, chatID in
             guard let chatID else { return }
             appState.pendingOpenChatID = nil
